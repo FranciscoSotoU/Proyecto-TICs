@@ -21,6 +21,7 @@ class Sender:
         """ Sends the image data with the header """
 
         "version 2 GITHUB COPILOT"
+        "skjd"
         pass
 
     def send_text(self, freqList) -> np.ndarray:
