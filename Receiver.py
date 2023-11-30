@@ -10,26 +10,28 @@ import scipy.signal as signal
 class Receiver:
     """ Class that represents the receiver of the communication channel"""
 
-    def __init__(self, channel: float):
+    def __init__(self):
         self.buffer = None
-        self.channel = channel
+        #self.channel = channel
         self.samplerate = 44100
         self.duration = 0.2
         self.textFreqDict = freqDict(600, 800, 16)
 
-    def listen(self, duration: float):
+    def listen(self, duration):
         """ Listens to the channel for a message """
         # record audio
         data = sd.rec(frames=int(self.samplerate*duration),
-                      samplerate=self.samplerate, channels=2)
+                      samplerate=self.samplerate, channels=1)
+        print("Listening")
         sd.wait()
+        print("Done listening")
         self.buffer = data
         return data
     
     def demodulate(self, signal, channelFreq, bandwidth):
         """ Demodulates the signal """
         # bandpass filter
-        signal = bandpass(signal, 50, 1000, 5)
+        #signal = bandpass(signal, 50, 1000, 5)
         # find peaks
         index = 0
         delta = int(self.duration*self.samplerate)
@@ -56,7 +58,7 @@ class Receiver:
         # correlate peaks with frequencies in freqDict
         keyFreqs = []
         for peak in peaks:
-            keyFreq = (peak - abs(channelFreq - bandwidth/2))//50
+            keyFreq = int((peak - abs(channelFreq - bandwidth/2))//50)
             keyFreqs.append(keyFreq)
 
         # convert keyFreqs to binary
