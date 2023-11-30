@@ -13,7 +13,7 @@ class Sender:
         self.GData = None
         self.BData = None
         self.sampleRate = 44100
-        self.freqDuration = 0.2
+        self.freqDuration = 0.05
 
         self.textFreqDict = freqDict(600, 800, 16)
 

@@ -9,10 +9,11 @@ from Receiver import Receiver
 if __name__ == '__main__':
     sender = Sender()
     path = "./data/text.txt"
-    sender.load_text(path)
-    sender.audioToCSV(sender.send_text(sender.dataToFrequency()), 'audiov1.txt')
+    # sender.load_text(path)
+    # sender.playText(sender.send_text(sender.dataToFrequency()))
+    # sender.audioToCSV(sender.send_text(sender.dataToFrequency()), 'audiov1.txt')
+    receiver = Receiver(100)
+    receiver.listen(5)
+    receiver.play_recorded()
+    receiver.plot_fft()
     print("s")
-
-
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
