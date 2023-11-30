@@ -20,8 +20,6 @@ class Sender:
     def send_image(self):
         """ Sends the image data with the header """
 
-        "version 2 GITHUB COPILOT"
-        "skjd"
         pass
 
     def send_text(self, freqList) -> np.ndarray:
@@ -73,10 +71,6 @@ class Sender:
             freqList.append(self.textFreqDict[int(semiByte2, 2)])
 
         return freqList
-
-        
-
-
 
 
 def string_to_bits(s):
