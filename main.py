@@ -10,7 +10,7 @@ if __name__ == '__main__':
     sender = Sender()
     path = "./data/text.txt"
     sender.load_text(path)
-    sender.audioToCSV(sender.send_text(sender.dataToFrequency()), 'audiov1.txt')
+    sender.playText(sender.send_text(sender.dataToFrequency()))
     print("s")
 
 

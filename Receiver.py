@@ -3,6 +3,8 @@ import sounddevice as sd
 import matplotlib
 #matplotlib.use("QtAgg")
 import matplotlib.pyplot as plt
+import scipy.signal as signal
+
 
 
 class Receiver:
@@ -12,6 +14,8 @@ class Receiver:
         self.buffer = None
         self.channel = channel
         self.samplerate = 44100
+        self.duration = 0.2
+        self.textFreqDict = freqDict(600, 800, 16)
 
     def listen(self, duration: float):
         """ Listens to the channel for a message """
@@ -20,11 +24,51 @@ class Receiver:
                       samplerate=self.samplerate, channels=2)
         sd.wait()
         self.buffer = data
-        return
+        return data
+    
+    def demodulate(self, signal, channelFreq, bandwidth):
+        """ Demodulates the signal """
+        # bandpass filter
+        signal = bandpass(signal, 50, 1000, 5)
+        # find peaks
+        index = 0
+        delta = int(self.duration*self.samplerate)
+        headerID = False
 
-    def decode(self, msg: np.ndarray, header: int):
-        """ Decodes the message from the channel"""
-        pass
+        peaks = []
+        while index+delta < len(signal):
+            window = signal[index:index+delta]
+            wfft = np.fft.fft(window)
+            wfft = wfft[len(wfft)//2:-1]
+            
+            freq = np.fft.fftfreq(len(wfft), 1/self.samplerate)
+            max_idx = np.argmax(np.abs(wfft))
+            max_freq = freq[max_idx]
+
+            if headerID:
+                peaks.append(max_idx)
+
+            if abs(50+30)> max_freq > abs(50-30): # se identifica header
+                headerID = True
+
+            index += delta
+        
+        # correlate peaks with frequencies in freqDict
+        keyFreqs = []
+        for peak in peaks:
+            keyFreq = (peak - abs(channelFreq - bandwidth/2))//50
+            keyFreqs.append(keyFreq)
+
+        # convert keyFreqs to binary
+        binary = [bin(i)[2:] for i in keyFreqs]
+        binary_pairs = [''.join(binary[i:i+2]) for i in range(0, len(binary), 2)]
+        return binary_pairs
+
+
+    def decode(self, binaryList):
+        """ Decodes the message from binary to text """
+        return ''.join(chr(int(binary, 2)) for binary in binaryList)
+        
 
     def play_recorded(self):
         sd.play(self.buffer, self.samplerate)
@@ -60,3 +104,21 @@ class Receiver:
                  ha='center', va='bottom')
 
         plt.show()
+
+
+def freqDict(channelFreq:float, bandwidth:float, n:int) -> dict:
+    """ Creates a dictionary of frequencies for the given channel """
+    freqDict = {}
+    freqs = np.linspace(channelFreq - bandwidth/2 + bandwidth/(2*n), 
+                        channelFreq + bandwidth/2 - bandwidth/(2*n), n)
+    
+    for index, item in enumerate(freqs):
+        freqDict[index] = item
+
+    return freqDict
+
+def bandpass(audio, lowFreq, highFreq, n):
+    """ Filters the audio data with a bandpass filter """
+    b, a = signal.butter(n, [lowFreq, highFreq], btype='bandpass', fs=44100)
+    return signal.filtfilt(b, a, audio)
+    
