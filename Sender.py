@@ -8,12 +8,12 @@ class Sender:
 
     def __init__(self):
         self.Data = None
-        self.textData = None
+        self.textBinData = None
         self.RData = None
         self.GData = None
         self.BData = None
         self.sampleRate = 44100
-        self.freqDuration = 0.05
+        self.freqDuration = 0.1
 
         self.textFreqDict = freqDict(600, 800, 16)
 
@@ -22,9 +22,10 @@ class Sender:
 
         pass
 
-    def send_text(self, freqList) -> np.ndarray:
+    def send_text(self) -> np.ndarray:
         """ Write audio data from frequency list"""
 
+        freqList = self.dataToFrequency()
         # to sinewaves
         audio = []
         tHeader = np.linspace(0, self.freqDuration, int(self.sampleRate * self.freqDuration))
@@ -58,13 +59,13 @@ class Sender:
         with open(path, 'r') as file:
             rawData = file.read()
 
-        self.textData = string_to_bits(rawData)    
+        self.textBinData = string_to_bits(rawData)    
 
     def dataToFrequency(self) -> list:
         """ Converts the data to list of frequencies """
         
-        freqList = [] #np.array(len(self.textData)*2) 
-        for index, byte in enumerate(self.textData):
+        freqList = [] #np.array(len(self.textBinData)*2) 
+        for index, byte in enumerate(self.textBinData):
             semiByte1 = byte[0:4]
             semiByte2 = byte[4:8]
             freqList.append(self.textFreqDict[int(semiByte1, 2)])
@@ -74,7 +75,10 @@ class Sender:
 
 
 def string_to_bits(s):
-    return [format(ord(ch), '08b') for ch in s]
+    ascii = [ord(ch) for ch in s] # Ascii values of the characters
+    return [format(i, '08b') for i in ascii] # Convert to binary
+
+
 
 def freqDict(channelFreq:float, bandwidth:float, n:int) -> dict:
     """ Creates a dictionary of frequencies for the given channel """
