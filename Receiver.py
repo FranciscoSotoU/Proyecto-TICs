@@ -4,7 +4,7 @@ import matplotlib
 # matplotlib.use("QtAgg")
 import matplotlib.pyplot as plt
 import scipy.signal as signal
-
+from scipy.stats import pearsonr
 
 class Receiver:
     """ Class that represents the receiver of the communication channel"""
@@ -13,10 +13,10 @@ class Receiver:
         self.buffer = None
         # self.channel = channel
         self.samplerate = 44100
-        self.duration = 0.1
+        self.freqDuration = 0.05
         self.channelFreq = channelFreq
         self.bandwidth = bandwidth
-        self.textFreqDict = create_freq_dict(self.channelFreq, self.bandwidth, 16)
+        self.textFreqDict = create_freq_dict(self.channelFreq, self.bandwidth, 2)
         self.headerFreq = 50
 
     def listen(self, duration):
@@ -30,48 +30,43 @@ class Receiver:
         self.buffer = data
         return data
 
-    def demodulate(self, audio_signal) -> list:
+    def demodulateText(self, audio_signal) -> list:
         """ Demodulates the signal into binary
         :param audio_signal: the signal to be demodulated
         :return: the binary list """
 
-        initial_index = find_header(audio_signal, self.headerFreq, self.duration)
-        delta = int(self.duration * self.samplerate)
-        index = initial_index + delta
-        last_header = len(audio_signal)#index + find_header(audio_signal[index:], self.headerFreq, self.duration)
-        freq_dict = create_freq_dict(self.channelFreq, self.bandwidth, 16)
-        peaks = []
-        while index + delta < last_header:
+        initial_index = self.find_header(audio_signal, self.headerFreq, self.freqDuration)
+        delta = int(self.freqDuration * self.samplerate)
+        index = initial_index + delta*3
+        last_index = self.find_header(audio_signal, self.headerFreq, self.freqDuration, reversed=True)
+
+        bits_list = []
+        while index + delta < last_index:
             window = audio_signal[index:index + delta]
-            t = np.linspace(0, self.duration, int(self.samplerate * self.duration))
+            t = np.linspace(0, self.freqDuration, int(self.samplerate * self.freqDuration))
             max_mean = 0
             idx = 0
-            for key in freq_dict:
-                freq = freq_dict[key]
+            for key in self.textFreqDict:
+                freq = self.textFreqDict[key]
                 cosine = np.sin(2 * np.pi * freq * t)
                 if np.abs(np.mean(window * cosine)) > max_mean:
                     max_mean = np.abs(np.mean(window * cosine))
                     idx = key
-            peaks.append(idx)
+            bits_list.append(idx)
             index += delta
-        binary = [bin(i) for i in peaks]
-        bin_list = []
-        for item in binary:
-            aux_item = item[2:]
-            if len(aux_item) == 3:
-                aux_item = '0' + aux_item
-            if len(aux_item) == 2:
-                aux_item = '00' + aux_item
-            if len(aux_item) == 1:
-                aux_item = '000' + aux_item
-            bin_list.append(aux_item)
+            # turn the bits list int a byte list
+        return bits_list
 
-        final_bin_list = []
-        i = 0
-        while i + 1 < len(bin_list[1:]):
-            final_bin_list.append(bin_list[1:][i] + bin_list[1:][i + 1])
-            i += 2
-        return final_bin_list
+    def bits_to_text(self, bits_list):
+        # Convert list of bits into a string
+        bits_str = ''.join(str(bit) for bit in bits_list)
+        # Split the string into chunks of 8 bits
+        chunks = [bits_str[i:i + 8] for i in range(0, len(bits_str), 8)]
+        # Convert each chunk into a character
+        chars = [chr(int(chunk, 2)) for chunk in chunks]
+        # Join all characters together to form the final text
+        text = ''.join(chars)
+        return text
 
     def freq2bin(self, peaks, channelFreq, bandwidth):
         """ Converts the frequencies to binary """
@@ -91,6 +86,39 @@ class Receiver:
         sd.play(self.buffer, self.samplerate)
         sd.wait()
         return
+
+    def find_header(self, audio, headerFreq, duration, reversed=False):
+        """ Finds the header in the audio """
+        tHeader = np.linspace(0, duration, int(self.samplerate * duration))
+        header = np.concatenate((np.sin(2 * np.pi * 50 * tHeader),
+                                 np.sin(2 * np.pi * 100 * tHeader),
+                                 np.sin(2 * np.pi * 50 * tHeader)))
+        if reversed:
+            audio = np.flip(audio)
+            header = np.flip(header)
+
+        index = 0
+        delta = len(header)
+        max_val = -np.inf
+        max_idx = 0
+        debug_list = []
+        while index + delta < len(audio):
+            window = audio[index:index + delta]
+            correlation_coefficient = np.abs(np.mean(window*header)) #pearsonr(window, header)[0]
+            if correlation_coefficient > 0.4:
+                if reversed:
+                    return len(audio) - index
+                return index
+            debug_list.append(correlation_coefficient)
+            if correlation_coefficient > max_val:
+                max_val = correlation_coefficient
+                max_idx = index
+            index += 1
+
+        if reversed:
+            return len(audio) - max_idx
+        else:
+            return max_idx
 
     def plot_fft(self):
         """Plots the FFT of the recorded data."""
@@ -147,15 +175,4 @@ def bin2str(binaryList) -> str:
     return ''.join(chr(int(binary, 2)) for binary in binaryList)
 
 
-def find_header(audio, headerFreq, duration):
-    """ Finds the header in the audio """
-    t = np.linspace(0, duration, int(44100 * duration))
-    cosine = np.sin(2 * np.pi * headerFreq * t)
-    index = 0
-    delta = int(duration * 44100)
-    while index + delta < len(audio):
-        window = audio[index:index + delta]
-        if np.abs(np.mean(window * cosine)) > 0.25:
-            return index
-        index += 1
-    return -1
+

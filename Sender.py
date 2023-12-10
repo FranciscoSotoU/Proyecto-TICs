@@ -13,11 +13,11 @@ class Sender:
         self.GData = None
         self.BData = None
         self.sampleRate = 44100
-        self.freqDuration = 0.1
+        self.freqDuration = 0.05
         self.bandwidth = bandwidth
         self.channelFreq = channelFreq
 
-        self.textFreqDict = create_freq_dict(self.channelFreq, self.bandwidth, 16)
+        self.textFreqDict = create_freq_dict(self.channelFreq, self.bandwidth, 2)
 
     def send_image(self):
         """ Sends the image data with the header """
@@ -26,15 +26,16 @@ class Sender:
     def send_text(self) -> np.ndarray:
         """ Write audio data from frequency list"""
 
-        freqList = self.dataToFrequency()
-        # to sinewaves
+        bitList = [item for sublist in self.textBinData for item in sublist] # flatten the list
         audio = []
         tHeader = np.linspace(0, self.freqDuration, int(self.sampleRate * self.freqDuration))
-        header = np.sin(2 * np.pi * 50 * tHeader)
+        header = np.concatenate((np.sin(2 * np.pi * 50 * tHeader),
+                                 np.sin(2 * np.pi * 100 * tHeader),
+                                 np.sin(2 * np.pi * 50 * tHeader)))
 
-        for freq in freqList:
+        for bit in bitList:
             t = np.linspace(0, self.freqDuration, int(self.sampleRate * self.freqDuration))
-            audio.append(np.sin(2 * np.pi * freq * t))
+            audio.append(np.sin(2 * np.pi * self.textFreqDict[int(bit)] * t))
 
         audio = np.hstack(audio)
         audio = np.concatenate((header, audio, header))
@@ -61,15 +62,22 @@ class Sender:
 
         self.textBinData = string_to_bits(rawData)
 
-    def dataToFrequency(self) -> list:
-        """ Converts the data to list of frequencies """
-
+    def dataToFrequency(self, n: int) -> list:
+        """ Converts the data to list of frequencies
+        :param
+        n: the number of symbols in the n-fsk modulation
+        :return: the list of frequencies """
         freqList = []  # np.array(len(self.textBinData)*2)
-        for index, byte in enumerate(self.textBinData):
-            semiByte1 = byte[0:4]
-            semiByte2 = byte[4:8]
-            freqList.append(self.textFreqDict[int(semiByte1, 2)])
-            freqList.append(self.textFreqDict[int(semiByte2, 2)])
+        if n == 2:
+            for index, byte in enumerate(self.textBinData):
+                for bit in byte:
+                    freqList.append(self.textFreqDict[int(bit)])
+        else:
+            for index, byte in enumerate(self.textBinData):
+                semiByte1 = byte[0:4]
+                semiByte2 = byte[4:8]
+                freqList.append(self.textFreqDict[int(semiByte1, 2)])
+                freqList.append(self.textFreqDict[int(semiByte2, 2)])
 
         return freqList
 
