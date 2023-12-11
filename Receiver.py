@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import scipy.signal as signal
 from scipy.stats import pearsonr
 
+
 class Receiver:
     """ Class that represents the receiver of the communication channel"""
 
@@ -37,7 +38,7 @@ class Receiver:
 
         initial_index = self.find_header(audio_signal, self.headerFreq, self.freqDuration)
         delta = int(self.freqDuration * self.samplerate)
-        index = initial_index + delta*3
+        index = initial_index + delta * 3
         last_index = self.find_header(audio_signal, self.headerFreq, self.freqDuration, reversed=True)
 
         bits_list = []
@@ -104,7 +105,7 @@ class Receiver:
         debug_list = []
         while index + delta < len(audio):
             window = audio[index:index + delta]
-            correlation_coefficient = np.abs(np.mean(window*header)) #pearsonr(window, header)[0]
+            correlation_coefficient = np.abs(np.mean(window * header))  # pearsonr(window, header)[0]
             if correlation_coefficient > 0.4:
                 if reversed:
                     return len(audio) - index
@@ -175,4 +176,7 @@ def bin2str(binaryList) -> str:
     return ''.join(chr(int(binary, 2)) for binary in binaryList)
 
 
-
+def filter_signal(audio_signal, samplerate, low_freq, high_freq):
+    """ Filters the audio signal with a bandpass filter """
+    b, a = signal.butter(5, [low_freq, high_freq], btype='bandpass', fs=samplerate, output='ba')
+    return signal.filtfilt(b, a, audio_signal)
