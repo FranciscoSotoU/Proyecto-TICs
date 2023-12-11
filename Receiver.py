@@ -5,6 +5,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import scipy.signal as signal
 from scipy.stats import pearsonr
+from scipy.io import wavfile
 
 
 class Receiver:
@@ -18,7 +19,7 @@ class Receiver:
         self.channelFreq = channelFreq
         self.bandwidth = bandwidth
         self.textFreqDict = create_freq_dict(self.channelFreq, self.bandwidth, 2)
-        self.headerFreq = 50
+        self.headerFreq = 85
 
     def listen(self, duration):
         """ Listens to the channel for a message """
@@ -29,6 +30,7 @@ class Receiver:
         sd.wait()
         print("Done listening")
         self.buffer = data
+        wavfile.write("audio1.wav", self.samplerate, data)
         return data
 
     def demodulateText(self, audio_signal) -> list:
@@ -91,9 +93,9 @@ class Receiver:
     def find_header(self, audio, headerFreq, duration, reversed=False):
         """ Finds the header in the audio """
         tHeader = np.linspace(0, duration, int(self.samplerate * duration))
-        header = np.concatenate((np.sin(2 * np.pi * 50 * tHeader),
-                                 np.sin(2 * np.pi * 100 * tHeader),
-                                 np.sin(2 * np.pi * 50 * tHeader)))
+        header = np.concatenate((np.sin(2 * np.pi * 85 * tHeader),
+                                 np.sin(2 * np.pi * 110 * tHeader),
+                                 np.sin(2 * np.pi * 85 * tHeader)))
         if reversed:
             audio = np.flip(audio)
             header = np.flip(header)
