@@ -2,8 +2,7 @@ import numpy as np
 import sounddevice as sd
 import matplotlib.pyplot as plt
 import scipy.signal as signal
-
-
+import cv2
 class Sender:
     """ Class that represents the sender of the communication channel"""
 
@@ -14,7 +13,7 @@ class Sender:
         self.GData = None
         self.BData = None
         self.sampleRate = 44100
-        self.freqDuration = 0.05
+        self.freqDuration = 0.005
         self.headerDuration = self.freqDuration*20 # 1 second header
         self.bandwidth = bandwidth
         self.channelFreq = channelFreq
@@ -24,9 +23,26 @@ class Sender:
         self.textFreqDict = create_freq_dict(self.channelFreq, self.bandwidth, 2)
 
 
-    def send_image(self):
-        """ Sends the image data with the header """
-        pass
+    def send_image(self) -> np.ndarray:
+        """ Write audio data from frequency list"""
+        bitList = [item for sublist in self.redBinData for item in sublist]
+        audio = []
+        tHeader = np.linspace(0, self.headerDuration, int(self.sampleRate * self.headerDuration))
+
+        # Create chirp header. Duration 10 times freqDuration = 1 second.
+        header = signal.chirp(tHeader, self.headerF1, self.headerDuration, self.headerF2, method='linear')
+
+        for bit in bitList:
+            #print(bit)
+            t = np.linspace(0, self.freqDuration, int(self.sampleRate * self.freqDuration))
+            audio.append(np.sin(2 * np.pi * self.textFreqDict[int(bit)] * t))
+        
+        audio = np.hstack(audio)
+
+        # Add header to the beginning and end of the audio. The end header is flipped for reverse correlation.
+        audio = np.concatenate((header, audio, np.flip(header)))
+        return audio
+
 
     def send_text(self) -> np.ndarray:
         """ Write audio data from frequency list"""
@@ -43,9 +59,15 @@ class Sender:
 
         phase = 0
         for bit in bitList:
+<<<<<<< HEAD
             freq = self.textFreqDict[int(bit)]
             phase += 2 * np.pi * freq * t[-1]  # Calculate the phase at the end of the frequency
             audio.append(np.sin(2 * np.pi * freq * t + phase))  # Start the next frequency at this phase
+=======
+            #print(bit)
+            t = np.linspace(0, self.freqDuration, int(self.sampleRate * self.freqDuration))
+            audio.append(np.sin(2 * np.pi * self.textFreqDict[int(bit)] * t))
+>>>>>>> 379f5056c82e31b842be60e407178c9c1c7de999
 
         audio = np.hstack(audio)
         # print("the length of the audio signal is", len(audio))
@@ -54,6 +76,7 @@ class Sender:
         audio = np.concatenate((header, audio))
         # print("The length of the audio signal with the header is", len(audio))
         return audio
+        
 
     def playText(self, audio):
         """ Plays the audio data including the 50 Hz header """
@@ -66,14 +89,20 @@ class Sender:
 
     def load_image(self, path: str):
         """ Loads the image from the path """
-        pass
-
+        img = cv2.imread(path)
+        r = img[:,:,0]
+        g = img[:,:,1]
+        b = img[:,:,2]
+        r = r.flatten()
+        r_binary = np.array([format(i, '08b') for i in r])
+        self.redBinData = r_binary
     def load_text(self, path: str):
         """ Loads the text from the path """
         with open(path, 'r', encoding='utf-8') as file:
             rawData = file.read()
 
         self.textBinData = string_to_bits(rawData)
+        print(self.textBinData)
 
     def dataToFrequency(self, n: int) -> list:
         """ Converts the data to list of frequencies
@@ -93,6 +122,14 @@ class Sender:
                 freqList.append(self.textFreqDict[int(semiByte2, 2)])
 
         return freqList
+    def set_freq_bands(self,min_frequency,max_frequency):
+        """ Sends all the data """
+        range = max_frequency - min_frequency
+        bands_range = range/5
+        self.text_band = min_frequency + bands_range
+        self.r_band = min_frequency + 2*bands_range
+        self.g_band = min_frequency + 3*bands_range
+        self.b_band = min_frequency + 4*bands_range
 
 
 def string_to_bits(s):
@@ -111,4 +148,3 @@ def create_freq_dict(channelFreq: float, bandwidth: float, n: int) -> dict:
 
     return freqDict
 
-# %%

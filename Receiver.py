@@ -15,7 +15,7 @@ class Receiver:
         self.buffer = None
         # self.channel = channel
         self.samplerate = 44100
-        self.freqDuration = 0.05
+        self.freqDuration = 0.005
         self.headerDuration = self.freqDuration * 20  # 1 second header
         self.channelFreq = channelFreq
         self.bandwidth = bandwidth
@@ -41,7 +41,7 @@ class Receiver:
         :param audio_signal: the signal to be demodulated
         :return: the binary list """
 
-        # initial_index = self.find_header(audio_signal, self.headerDuration)
+        initial_index = self.find_header(audio_signal, self.headerDuration)
         delta = int(self.freqDuration * self.samplerate)
         # index = initial_index + int(self.headerDuration * self.samplerate)
         index = self.header_correlation(audio_signal, 5)
@@ -104,6 +104,41 @@ class Receiver:
             index += delta
             # turn the bits list int a byte list
         return bits_list
+    
+    def demodulateImage(self, audio_signal):
+        """ Demodulates the signal into binary
+        :param audio_signal: the signal to be demodulated
+        :return: the binary list """
+
+        initial_index = self.find_header(audio_signal, self.headerDuration)
+        print('header')
+        delta = int(self.freqDuration * self.samplerate)
+        index = initial_index + int(self.headerDuration * self.samplerate)
+        last_index = self.find_header(audio_signal, self.headerDuration, reversed=True)
+
+        bits_list = []
+        while index + delta < last_index:
+            window = audio_signal[index:index + delta]
+            t = np.linspace(0, self.freqDuration, int(self.samplerate * self.freqDuration))
+            max_mean = 0
+            idx = 0
+            for key in self.textFreqDict:
+                freq = self.textFreqDict[key]
+                cosine = np.sin(2 * np.pi * freq * t)
+                if np.abs(np.mean(window * cosine)) > max_mean:
+                    max_mean = np.abs(np.mean(window * cosine))
+                    idx = key
+            bits_list.append(idx)
+            index += delta
+            # turn the bits list int a byte list
+        return bits_list
+
+    def bits_to_image(self, bits_list):
+        values = [int(bits_str, 2) for bits_str in bits_list]
+        values = np.array(values)
+        sqr_shape = int(np.sqrt(len(values)))
+        values = values.reshape(sqr_shape,sqr_shape)
+        return values
 
     def bits_to_text(self, bits_list):
         # Convert list of bits into a string
@@ -115,6 +150,17 @@ class Receiver:
         # Join all characters together to form the final text
         text = ''.join(chars)
         return text
+    
+    def set_freq_bands(self,min_frequency,max_frequency):
+        """ Sends all the data """
+        range = max_frequency - min_frequency
+        bands_range = range/5
+        self.text_band = min_frequency + bands_range
+        self.r_band = min_frequency + 2*bands_range
+        self.g_band = min_frequency + 3*bands_range
+        self.b_band = min_frequency + 4*bands_range
+
+        
 
     def freq2bin(self, peaks, channelFreq, bandwidth):
         """ Converts the frequencies to binary """

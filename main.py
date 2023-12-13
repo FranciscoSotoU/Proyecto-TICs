@@ -14,11 +14,10 @@ from scipy.io import wavfile
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 
-    # sender = Sender(600, 800)
-    # sender.load_text('./data/text.txt')
-    # audio = sender.send_text()
-    # wavfile.write("audio2.wav", 44100, audio)
-    # sender.playText(audio) 
+    sender = Sender(600, 800)
+    sender.load_text('./data/text.txt')
+    audio = sender.send_text()
+    # sender.playText(audio)
 
 
 
@@ -44,6 +43,6 @@ if __name__ == '__main__':
 
     # # receiver = Receiver(600, 800)
 
-    bits = receiver.demodText_fft(audio)
+    bits = receiver.demodulateText(audio)
     decoded_text = receiver.bits_to_text(bits)
     print(decoded_text)
