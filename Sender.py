@@ -14,7 +14,7 @@ class Sender:
         self.BData = None
         self.sampleRate = 44100
         self.freqDuration = 0.005
-        self.headerDuration = self.freqDuration*20 # 1 second header
+        self.headerDuration = self.freqDuration*200 # 1 second header
         self.bandwidth = bandwidth
         self.channelFreq = channelFreq
         self.headerF1 = 80

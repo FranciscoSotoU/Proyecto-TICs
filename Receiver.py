@@ -16,7 +16,7 @@ class Receiver:
         # self.channel = channel
         self.samplerate = 44100
         self.freqDuration = 0.005
-        self.headerDuration = self.freqDuration * 20  # 1 second header
+        self.headerDuration = self.freqDuration * 200  # 1 second header
         self.channelFreq = channelFreq
         self.bandwidth = bandwidth
         self.textFreqDict = create_freq_dict(self.channelFreq, self.bandwidth, 2)
