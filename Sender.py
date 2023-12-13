@@ -1,6 +1,7 @@
 import numpy as np
 import sounddevice as sd
 import matplotlib.pyplot as plt
+import scipy.signal as signal
 
 
 class Sender:
@@ -14,10 +15,14 @@ class Sender:
         self.BData = None
         self.sampleRate = 44100
         self.freqDuration = 0.05
+        self.headerDuration = self.freqDuration*20 # 1 second header
         self.bandwidth = bandwidth
         self.channelFreq = channelFreq
+        self.headerF1 = 80
+        self.headerF2 = 500
 
         self.textFreqDict = create_freq_dict(self.channelFreq, self.bandwidth, 2)
+
 
     def send_image(self):
         """ Sends the image data with the header """
@@ -28,18 +33,19 @@ class Sender:
 
         bitList = [item for sublist in self.textBinData for item in sublist] # flatten the list
         audio = []
-        tHeader = np.linspace(0, self.freqDuration, int(self.sampleRate * self.freqDuration))
-        header = np.concatenate((np.sin(2 * np.pi * 50 * tHeader),
-                                 np.sin(2 * np.pi * 100 * tHeader),
-                                 np.sin(2 * np.pi * 50 * tHeader)))
+        tHeader = np.linspace(0, self.headerDuration, int(self.sampleRate * self.headerDuration))
+
+        # Create chirp header. Duration 10 times freqDuration = 1 second.
+        header = signal.chirp(tHeader, self.headerF1, self.headerDuration, self.headerF2, method='linear')
 
         for bit in bitList:
             t = np.linspace(0, self.freqDuration, int(self.sampleRate * self.freqDuration))
             audio.append(np.sin(2 * np.pi * self.textFreqDict[int(bit)] * t))
 
         audio = np.hstack(audio)
-        audio = np.concatenate((header, audio, header))
 
+        # Add header to the beginning and end of the audio. The end header is flipped for reverse correlation.
+        audio = np.concatenate((header, audio, np.flip(header)))
         return audio
 
     def playText(self, audio):
@@ -57,7 +63,7 @@ class Sender:
 
     def load_text(self, path: str):
         """ Loads the text from the path """
-        with open(path, 'r') as file:
+        with open(path, 'r', encoding='utf-8') as file:
             rawData = file.read()
 
         self.textBinData = string_to_bits(rawData)
@@ -97,3 +103,5 @@ def create_freq_dict(channelFreq: float, bandwidth: float, n: int) -> dict:
         freqDict[index] = item
 
     return freqDict
+
+# %%

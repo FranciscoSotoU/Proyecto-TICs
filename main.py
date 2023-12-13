@@ -14,25 +14,38 @@ from scipy.io import wavfile
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 
-    fs, audio = wavfile.read("audio1.wav")
+    sender = Sender(600, 800)
+    sender.load_text('./data/text.txt')
+    audio = sender.send_text()
+    # sender.playText(audio)
 
-    audio = audio[44100:]
 
-    # Normalize signal
 
-    audio = audio/np.max(np.abs(audio))
-    audio = audio - np.mean(audio)
+    # receiver = Receiver(600, 800)
+    # audio = receiver.listen(60)
+    # wavfile.write("audio2.wav", 44100, audio)
+    # print("Done listening")
 
-    # Plot signal
+    # fs, audio = wavfile.read("audio1.wav")
 
-    plt.plot(audio)
-    plt.show()
+    # audio = audio[44100:]
 
-    # Demodulate signal
+    # # Normalize signal
+
+    # audio = audio/np.max(np.abs(audio))
+    # audio = audio - np.mean(audio)
+
+    # # Plot signal
+
+    # plt.plot(audio)
+    # plt.show()
+
+    # # Demodulate signal
 
     receiver = Receiver(600, 800)
 
     bits = receiver.demodulateText(audio)
     decoded_text = receiver.bits_to_text(bits)
     print(decoded_text)
+    
 

@@ -16,10 +16,12 @@ class Receiver:
         # self.channel = channel
         self.samplerate = 44100
         self.freqDuration = 0.05
+        self.headerDuration = self.freqDuration * 20  # 1 second header
         self.channelFreq = channelFreq
         self.bandwidth = bandwidth
         self.textFreqDict = create_freq_dict(self.channelFreq, self.bandwidth, 2)
-        self.headerFreq = 85
+        self.headerF1 = 80
+        self.headerF2 = 500
 
     def listen(self, duration):
         """ Listens to the channel for a message """
@@ -38,10 +40,10 @@ class Receiver:
         :param audio_signal: the signal to be demodulated
         :return: the binary list """
 
-        initial_index = self.find_header(audio_signal, self.headerFreq, self.freqDuration)
+        initial_index = self.find_header(audio_signal, self.headerDuration)
         delta = int(self.freqDuration * self.samplerate)
-        index = initial_index + delta * 3
-        last_index = self.find_header(audio_signal, self.headerFreq, self.freqDuration, reversed=True)
+        index = initial_index + int(self.headerDuration * self.samplerate)
+        last_index = self.find_header(audio_signal, self.headerDuration, reversed=True)
 
         bits_list = []
         while index + delta < last_index:
@@ -90,12 +92,13 @@ class Receiver:
         sd.wait()
         return
 
-    def find_header(self, audio, headerFreq, duration, reversed=False):
+    def find_header(self, audio, duration, reversed=False):
         """ Finds the header in the audio """
-        tHeader = np.linspace(0, duration, int(self.samplerate * duration))
-        header = np.concatenate((np.sin(2 * np.pi * 85 * tHeader),
-                                 np.sin(2 * np.pi * 110 * tHeader),
-                                 np.sin(2 * np.pi * 85 * tHeader)))
+        tHeader = np.linspace(0, duration, int(self.samplerate * self.headerDuration))
+
+        # Create header using chirp, 
+        header = signal.chirp(tHeader, self.headerF1, self.headerDuration, self.headerF2, method='linear')
+
         if reversed:
             audio = np.flip(audio)
             header = np.flip(header)
@@ -108,20 +111,21 @@ class Receiver:
         while index + delta < len(audio):
             window = audio[index:index + delta]
             correlation_coefficient = np.abs(np.mean(window * header))  # pearsonr(window, header)[0]
-            if correlation_coefficient > 0.4:
-                if reversed:
-                    return len(audio) - index
-                return index
+            # if correlation_coefficient > 0.4:
+            #     if reversed:
+            #         return len(audio) - index
+            #     return index
             debug_list.append(correlation_coefficient)
             if correlation_coefficient > max_val:
                 max_val = correlation_coefficient
                 max_idx = index
             index += 1
 
-        if reversed:
-            return len(audio) - max_idx
-        else:
-            return max_idx
+        # if reversed:
+        #     return len(audio) - max_idx
+        # else:
+        #     return max_idx
+        return max_idx
 
     def plot_fft(self):
         """Plots the FFT of the recorded data."""
