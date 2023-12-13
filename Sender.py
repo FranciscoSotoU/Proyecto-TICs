@@ -2,7 +2,8 @@ import numpy as np
 import sounddevice as sd
 import matplotlib.pyplot as plt
 import scipy.signal as signal
-import cv2
+# import cv2
+
 class Sender:
     """ Class that represents the sender of the communication channel"""
 
@@ -13,12 +14,12 @@ class Sender:
         self.GData = None
         self.BData = None
         self.sampleRate = 44100
-        self.freqDuration = 0.005
-        self.headerDuration = self.freqDuration*20 # 1 second header
+        self.freqDuration = 0.05
+        self.headerDuration = self.freqDuration*20*5 # 1 second header
         self.bandwidth = bandwidth
         self.channelFreq = channelFreq
-        self.headerF1 = 80
-        self.headerF2 = 500
+        self.headerF1 = 200
+        self.headerF2 = 1000
 
         self.textFreqDict = create_freq_dict(self.channelFreq, self.bandwidth, 2)
 
@@ -58,16 +59,10 @@ class Sender:
         
 
         phase = 0
-        for bit in bitList:
-<<<<<<< HEAD
+        for bit in bitList: 
             freq = self.textFreqDict[int(bit)]
             phase += 2 * np.pi * freq * t[-1]  # Calculate the phase at the end of the frequency
             audio.append(np.sin(2 * np.pi * freq * t + phase))  # Start the next frequency at this phase
-=======
-            #print(bit)
-            t = np.linspace(0, self.freqDuration, int(self.sampleRate * self.freqDuration))
-            audio.append(np.sin(2 * np.pi * self.textFreqDict[int(bit)] * t))
->>>>>>> 379f5056c82e31b842be60e407178c9c1c7de999
 
         audio = np.hstack(audio)
         # print("the length of the audio signal is", len(audio))
@@ -96,13 +91,15 @@ class Sender:
         r = r.flatten()
         r_binary = np.array([format(i, '08b') for i in r])
         self.redBinData = r_binary
+
     def load_text(self, path: str):
         """ Loads the text from the path """
+
         with open(path, 'r', encoding='utf-8') as file:
             rawData = file.read()
 
         self.textBinData = string_to_bits(rawData)
-        print(self.textBinData)
+        # print(self.textBinData)
 
     def dataToFrequency(self, n: int) -> list:
         """ Converts the data to list of frequencies

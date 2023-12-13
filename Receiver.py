@@ -15,13 +15,13 @@ class Receiver:
         self.buffer = None
         # self.channel = channel
         self.samplerate = 44100
-        self.freqDuration = 0.005
-        self.headerDuration = self.freqDuration * 20  # 1 second header
+        self.freqDuration = 0.05
+        self.headerDuration = self.freqDuration * 20 * 5  # 1 second header
         self.channelFreq = channelFreq
         self.bandwidth = bandwidth
         self.textFreqDict = create_freq_dict(self.channelFreq, self.bandwidth, 2)
-        self.headerF1 = 80
-        self.headerF2 = 500
+        self.headerF1 = 200
+        self.headerF2 = 1000
         self.textLength = len("¡Laboratorio de Tecnologías de Información y de Comunicación EL5207! Transmisor número 1, primavera 2023.")
 
     def listen(self, duration):
@@ -41,10 +41,10 @@ class Receiver:
         :param audio_signal: the signal to be demodulated
         :return: the binary list """
 
-        initial_index = self.find_header(audio_signal, self.headerDuration)
+        # initial_index = self.find_header(audio_signal, self.headerDuration)
         delta = int(self.freqDuration * self.samplerate)
         # index = initial_index + int(self.headerDuration * self.samplerate)
-        index = self.header_correlation(audio_signal, 5)
+        index = self.header_correlation(audio_signal, 10)
         print("indice inicial (después del header)", index)
         # last_index = self.find_header(audio_signal, self.headerDuration, reversed=True)
         last_index = index + self.textLength * 8 * int(self.freqDuration * self.samplerate)
@@ -75,7 +75,7 @@ class Receiver:
         # initial_index = self.find_header(audio_signal, self.headerDuration)
         delta = int(self.freqDuration * self.samplerate)
         # index = initial_index + int(self.headerDuration * self.samplerate)
-        index = self.header_correlation(audio_signal, 5)
+        index = self.header_correlation(audio_signal, 10)
         # last_index = self.find_header(audio_signal, self.headerDuration, reversed=True)
         last_index = index + self.textLength * 8 * int(self.freqDuration * self.samplerate)
 
@@ -234,6 +234,7 @@ class Receiver:
 
         return initial_index
 
+
     def plot_fft(self, audio):
         """Plots the FFT of the recorded data."""
 
@@ -297,3 +298,21 @@ def filter_signal(audio_signal, samplerate, low_freq, high_freq):
     """ Filters the audio signal with a bandpass filter """
     b, a = signal.butter(5, [low_freq, high_freq], btype='bandpass', fs=samplerate, output='ba')
     return signal.filtfilt(b, a, audio_signal)
+
+def plotFFT_window(window, sampleRate):
+    
+    fft_result = np.fft.fft(window)
+    L = len(fft_result)
+
+    # Compute corresponding frequencies
+    freq = np.fft.fftfreq(len(fft_result), 1 / sampleRate)
+
+    max_idx = np.argmax(np.abs(fft_result))
+    max_freq = freq[max_idx]
+
+    # Plot FFT
+    plt.figure(figsize=(10, 4))
+    plt.plot(freq[0:L // 2], np.abs(fft_result)[0:L // 2])
+    plt.title("FFT of Recorded Data")
+    plt.xlabel("Frequency (Hz)")
+    plt.ylabel("Magnitude")
