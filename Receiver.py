@@ -15,7 +15,7 @@ class Receiver:
         self.buffer = None
         # self.channel = channel
         self.samplerate = 44100
-        self.freqDuration = 0.05
+        self.freqDuration = 0.005
         self.headerDuration = self.freqDuration * 20  # 1 second header
         self.channelFreq = channelFreq
         self.bandwidth = bandwidth
@@ -41,6 +41,7 @@ class Receiver:
         :return: the binary list """
 
         initial_index = self.find_header(audio_signal, self.headerDuration)
+        print(1)
         delta = int(self.freqDuration * self.samplerate)
         index = initial_index + int(self.headerDuration * self.samplerate)
         last_index = self.find_header(audio_signal, self.headerDuration, reversed=True)
@@ -68,6 +69,7 @@ class Receiver:
         :return: the binary list """
 
         initial_index = self.find_header(audio_signal, self.headerDuration)
+        print('header')
         delta = int(self.freqDuration * self.samplerate)
         index = initial_index + int(self.headerDuration * self.samplerate)
         last_index = self.find_header(audio_signal, self.headerDuration, reversed=True)
