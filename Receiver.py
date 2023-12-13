@@ -15,8 +15,8 @@ class Receiver:
         self.buffer = None
         # self.channel = channel
         self.samplerate = 44100
-        self.freqDuration = 0.005
-        self.headerDuration = self.freqDuration * 200  # 1 second header
+        self.freqDuration = 0.05
+        self.headerDuration = self.freqDuration * 20  # 1 second header
         self.channelFreq = channelFreq
         self.bandwidth = bandwidth
         self.textFreqDict = create_freq_dict(self.channelFreq, self.bandwidth, 2)
@@ -63,6 +63,8 @@ class Receiver:
             # turn the bits list int a byte list
         return bits_list
     
+    
+    
     def demodulateImage(self, audio_signal):
         """ Demodulates the signal into binary
         :param audio_signal: the signal to be demodulated
@@ -89,6 +91,27 @@ class Receiver:
             bits_list.append(idx)
             index += delta
             # turn the bits list int a byte list
+        return bits_list
+    
+    def decode_audio(self, audio_signal):
+        initial_index = self.find_header(audio_signal, self.headerDuration)
+        print('header')
+        delta = int(self.freqDuration * self.samplerate)
+        index = initial_index + int(self.headerDuration * self.samplerate)
+        last_index = self.find_header(audio_signal, self.headerDuration, reversed=True)
+
+        bits_list = []
+        t = np.linspace(0, self.freqDuration, int(self.samplerate * self.freqDuration))
+
+        while index + delta < last_index:
+            window = audio_signal[index:index + delta]
+            freqs = np.array(list(self.textFreqDict.values()))
+            cosines = np.sin(2 * np.pi * freqs[:, None] * t)
+            means = np.abs(np.mean(window * cosines, axis=1))
+            idx = np.argmax(means)
+            bits_list.append(list(self.textFreqDict.keys())[idx])
+            index += delta
+
         return bits_list
 
     def bits_to_image(self, bits_list):
@@ -139,7 +162,7 @@ class Receiver:
         sd.wait()
         return
 
-    def find_header(self, audio, duration, reversed=False):
+    def find_header2(self, audio, duration, reversed=False):
         """ Finds the header in the audio """
         tHeader = np.linspace(0, duration, int(self.samplerate * self.headerDuration))
 
@@ -172,6 +195,25 @@ class Receiver:
         #     return len(audio) - max_idx
         # else:
         #     return max_idx
+        return max_idx
+    
+    def find_header(self, audio, duration, reversed=False):
+
+        tHeader = np.linspace(0, duration, int(self.samplerate * self.headerDuration))
+
+        # Create header using chirp, 
+        header = signal.chirp(tHeader, self.headerF1, self.headerDuration, self.headerF2, method='linear')
+
+        if reversed:
+            audio = np.flip(audio)
+            header = np.flip(header)
+
+        # Compute the correlation of the audio and the header
+        correlation = np.correlate(audio, header, mode='valid')
+
+        # Find the index of the maximum correlation
+        max_idx = np.argmax(np.abs(correlation))
+
         return max_idx
 
     def plot_fft(self):

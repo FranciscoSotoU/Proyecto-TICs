@@ -13,8 +13,8 @@ class Sender:
         self.GData = None
         self.BData = None
         self.sampleRate = 44100
-        self.freqDuration = 0.005
-        self.headerDuration = self.freqDuration*200 # 1 second header
+        self.freqDuration = 0.05
+        self.headerDuration = self.freqDuration*20 # 1 second header
         self.bandwidth = bandwidth
         self.channelFreq = channelFreq
         self.headerF1 = 80
@@ -45,25 +45,31 @@ class Sender:
 
 
     def send_text(self) -> np.ndarray:
-        """ Write audio data from frequency list"""
+            """ Write audio data from frequency list"""
 
-        bitList = [item for sublist in self.textBinData for item in sublist] # flatten the list
-        audio = []
-        tHeader = np.linspace(0, self.headerDuration, int(self.sampleRate * self.headerDuration))
+            bitList = [item for sublist in self.textBinData for item in sublist] # flatten the list
+            audio = []
+            tHeader = np.linspace(0, self.headerDuration, int(self.sampleRate * self.headerDuration))
 
-        # Create chirp header. Duration 10 times freqDuration = 1 second.
-        header = signal.chirp(tHeader, self.headerF1, self.headerDuration, self.headerF2, method='linear')
+            # Create chirp header. Duration 10 times freqDuration = 1 second.
+            header = signal.chirp(tHeader, self.headerF1, self.headerDuration, self.headerF2, method='linear')
 
-        for bit in bitList:
-            #print(bit)
             t = np.linspace(0, self.freqDuration, int(self.sampleRate * self.freqDuration))
-            audio.append(np.sin(2 * np.pi * self.textFreqDict[int(bit)] * t))
+            
 
-        audio = np.hstack(audio)
+            phase = 0
+            for bit in bitList:
+                freq = self.textFreqDict[int(bit)]
+                phase += 2 * np.pi * freq * t[-1]  # Calculate the phase at the end of the frequency
+                audio.append(np.sin(2 * np.pi * freq * t + phase))  # Start the next frequency at this phase
 
-        # Add header to the beginning and end of the audio. The end header is flipped for reverse correlation.
-        audio = np.concatenate((header, audio, np.flip(header)))
-        return audio
+            audio = np.hstack(audio)
+            # print("the length of the audio signal is", len(audio))
+
+            # Add header to the beginning of the audio.
+            audio = np.concatenate((header, audio))
+            # print("The length of the audio signal with the header is", len(audio))
+            return audio
         
 
     def playText(self, audio):
