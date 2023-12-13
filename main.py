@@ -15,9 +15,9 @@ from scipy.io import wavfile
 if __name__ == '__main__':
 
     sender = Sender(600, 800)
-    sender.load_text('./data/text.txt')
-    audio = sender.send_text()
-    # sender.playText(audio)
+    sender.load_image('/Users/francisco/Documents/Semestre 12/Lab TICS/TICs_project/data/1_20_Imagen1.png')
+    audio = sender.send_image()
+    sender.playText(audio)
 
 
 
@@ -44,8 +44,9 @@ if __name__ == '__main__':
 
     receiver = Receiver(600, 800)
 
-    bits = receiver.demodulateText(audio)
-    decoded_text = receiver.bits_to_text(bits)
+    bits = receiver.demodulateImage(audio)
+    decoded_text = receiver.bits_to_image(bits)
+    cv2.imshow(decoded_text)
     print(decoded_text)
     
 
