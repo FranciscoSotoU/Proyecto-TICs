@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import scipy.signal as signal
 from scipy.stats import pearsonr
 from scipy.io import wavfile
+import cv2
 
 
 class Receiver:
@@ -145,7 +146,7 @@ class Receiver:
             # turn the bits list int a byte list
         return bits_list
     
-    def decode_audio(self, audio_signal: np.ndarray, color='text', initial_index=None) -> tuple[int, int, list[str]]:
+    def decode_audio(self, audio_signal: np.ndarray, color='text', initial_index=None) -> (int, int, list):
         """ Decodes the audio signal into binary
         :param audio_signal: the audio signal to be decoded
         :param color: the color of the audio signal
@@ -211,7 +212,7 @@ class Receiver:
         bits.pop(1)
         return bits
     
-    def decode_all(self, byte: list[str]) -> np.ndarray:
+    def decode_all(self, byte: list) -> np.ndarray:
         bits_list = []
         for bit in byte:
             bits_list.append(self.hamming_decode(bit))

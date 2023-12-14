@@ -2,7 +2,7 @@ import numpy as np
 import sounddevice as sd
 import matplotlib.pyplot as plt
 import scipy.signal as signal
-# import cv2
+import cv2
 
 class Sender:
     """ Class that represents the sender of the communication channel"""
@@ -111,7 +111,7 @@ class Sender:
                 freq = self.textFreqDict[int(bit)]
                 phase += 2 * np.pi * freq * t[-1]  # Calculate the phase at the end of the frequency
                 audio.append(np.sin(2 * np.pi * freq * t + phase))  # Start the next frequency at this phase
-            audio = self.hamming_encode(audio)
+            audio = self.encode_all(audio)
             audio = np.hstack(audio)
             # print("the length of the audio signal is", len(audio))
 
