@@ -23,20 +23,19 @@ if __name__ == '__main__':
     # audio = padded_signal + np.random.normal(0, 0.1, len(padded_signal))
 
     
-    
     receiver = Receiver(600, 800)
-    # audio = receiver.listen(60)
-    # wavfile.write("audio5.wav", 44100, audio)
-    # print("Done listening")
+    # audio = receiver.listen(70)
+    # wavfile.write("audio7.wav", 44100, audio)
 
-    fs, audio = wavfile.read("audio6.wav")
-
-    # # audio = audio[44100:]
+    fs, audio = wavfile.read("audio7.wav")
 
     # Normalize signal
 
     audio = audio/np.max(np.abs(audio))
     audio = audio - np.mean(audio)
+
+    audio = filter_signal(audio, 44100, 150, 1050)
+
 
     # Plot signal
 

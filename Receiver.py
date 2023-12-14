@@ -75,13 +75,15 @@ class Receiver:
         # initial_index = self.find_header(audio_signal, self.headerDuration)
         delta = int(self.freqDuration * self.samplerate)
         # index = initial_index + int(self.headerDuration * self.samplerate)
-        index = self.header_correlation(audio_signal, 10)
+        index = self.header_correlation(audio_signal, 15)
         # last_index = self.find_header(audio_signal, self.headerDuration, reversed=True)
         last_index = index + self.textLength * 8 * int(self.freqDuration * self.samplerate)
 
         bits_list = []
         while index + delta <= last_index:
             window = audio_signal[index:index + delta]
+            window = window/np.max(np.abs(window))
+            window = window - np.mean(window)
 
             fft_result = np.fft.fft(window)
             L = len(fft_result)
@@ -221,11 +223,14 @@ class Receiver:
         """ Returns the audio data after the header"""
 
         # Search in the first 10 seconds of audio
-        audio = audio[0:self.samplerate*seconds]
+        window = audio[0:self.samplerate*seconds]
+        window = window/np.max(np.abs(window))
+        window = window - np.mean(window)
+
         tHeader = np.linspace(0, self.headerDuration, int(self.samplerate * self.headerDuration))
         header = signal.chirp(tHeader, self.headerF1, self.headerDuration, self.headerF2, method='linear')
 
-        correlation = np.correlate(audio, header, mode='full')
+        correlation = np.correlate(window, header, mode='full')
         max_idx = np.argmax(correlation)
 
         displacement = max_idx - len(header) + 1
