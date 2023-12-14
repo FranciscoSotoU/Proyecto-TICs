@@ -15,6 +15,7 @@ class Sender:
         self.BData = None
         self.sampleRate = 44100
         self.freqDuration = 0.01
+        self.freq_text_duration = 0.01*1.75
         self.headerDuration = self.freqDuration * 100 # 1 second header
         self.max_frequency = max_frequency
         self.min_frequency = min_frequency
@@ -102,7 +103,7 @@ class Sender:
             # Create chirp header. Duration 10 times freqDuration = 1 second.
             header = signal.chirp(tHeader, self.headerF1, self.headerDuration, self.headerF2, method='linear')
 
-            t = np.linspace(0, self.freqDuration, int(self.sampleRate * self.freqDuration))
+            t = np.linspace(0, self.freq_text_duration, int(self.sampleRate * self.freq_text_duration))
             
 
             phase = 0
