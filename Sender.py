@@ -13,8 +13,8 @@ class Sender:
         self.GData = None
         self.BData = None
         self.sampleRate = 44100
-        self.freqDuration = 0.005
-        self.headerDuration = self.freqDuration*200 # 1 second header
+        self.freqDuration = 0.01
+        self.headerDuration = self.freqDuration * 100 # 1 second header
         self.max_frequency = max_frequency
         self.min_frequency = min_frequency
         self.headerF1 = 200
@@ -178,26 +178,22 @@ class Sender:
         """ Sends all the data """
 
         range = self.max_frequency - self.min_frequency
-        self.bands_range = range/5
-        self.text_band = self.min_frequency + self.bands_range
-        self.r_band = self.min_frequency + 2*self.bands_range
-        self.g_band = self.min_frequency + 3*self.bands_range
-        self.b_band = self.min_frequency + 4*self.bands_range
-        
-
-
+        self.bands_range = (range/4)*0.5
+        real_band_range = range/4
+        self.text_band = self.min_frequency 
+        self.r_band = self.min_frequency + 1*real_band_range
+        self.g_band = self.min_frequency + 2*real_band_range
+        self.b_band = self.min_frequency + 3*real_band_range
 
 def string_to_bits(s):
     ascii_list = [ord(ch) for ch in s]  # Ascii values of the characters
     return [format(i, '08b') for i in ascii_list]  # Convert to binary
 
 
-def create_freq_dict(channelFreq: float, bandwidth: float, n: int) -> dict:
+def create_freq_dict(minfreq: float, bandwidth: float, n: int) -> dict:
     """ Creates a dictionary of frequencies for the given channel """
     freqDict = {}
-    freqs = np.linspace(channelFreq - bandwidth / 2 + bandwidth / (2 * n),
-                        channelFreq + bandwidth / 2 - bandwidth / (2 * n), n)
-
+    freqs = np.linspace(minfreq, bandwidth + minfreq, n)
     for index, item in enumerate(freqs):
         freqDict[index] = item
 

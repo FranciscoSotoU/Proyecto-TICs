@@ -15,8 +15,8 @@ class Receiver:
         self.buffer = None
         # self.channel = channel
         self.samplerate = 44100
-        self.freqDuration = 0.005
-        self.headerDuration = self.freqDuration * 200  # 1 second header
+        self.freqDuration = 0.01
+        self.headerDuration = self.freqDuration * 100 #  # 1 second header
         self.max_frequency = max_frequency
         self.min_frequency = min_frequency
         #self.textFreqDict = create_freq_dict(self.channelFreq, self.bandwidth, 2)
@@ -134,7 +134,7 @@ class Receiver:
     def hamming_decode(self,bits):
         bits = list(map(int,bits))
         if len(bits)<7:
-            bits.append(1)
+            bits.extend([0] * (7 - len(bits)))
         
         """Decode bits using Hamming(7,4) code."""
 
@@ -157,10 +157,10 @@ class Receiver:
         return np.concatenate(bits_list)
     
     def decode_image(self,audio,img_size):
-        r_audio =  filter_signal(audio,self.samplerate,self.r_band-self.bands_range/2,self.r_band+self.bands_range*3/2)
+        r_audio =  filter_signal(audio,self.samplerate,self.r_band-self.bands_range*0.25,self.r_band+self.bands_range*1.5)
         #print(r_audio)
-        g_audio =  filter_signal(audio,self.samplerate,self.g_band-self.bands_range/2,self.g_band+self.bands_range*3/2)
-        b_audio =  filter_signal(audio,self.samplerate,self.b_band-self.bands_range/2,self.b_band+self.bands_range*3/2)
+        g_audio =  filter_signal(audio,self.samplerate,self.g_band-self.bands_range*0.25,self.g_band+self.bands_range*1.5)
+        b_audio =  filter_signal(audio,self.samplerate,self.b_band-self.bands_range*0.25,self.b_band+self.bands_range*1.5)
         
         
         initial_index,last_index,b_bits = self.decode_audio(b_audio,'b')
@@ -331,23 +331,24 @@ class Receiver:
         """ Sends all the data """
 
         range = self.max_frequency - self.min_frequency
-        self.bands_range = range/5
-        self.text_band = self.min_frequency + self.bands_range
-        self.r_band = self.min_frequency + 2*self.bands_range
-        self.g_band = self.min_frequency + 3*self.bands_range
-        self.b_band = self.min_frequency + 4*self.bands_range
-        
+        self.bands_range = (range/4)*0.5
+        real_band_range = range/4
+        self.text_band = self.min_frequency 
+        self.r_band = self.min_frequency + 1*real_band_range
+        self.g_band = self.min_frequency + 2*real_band_range
+        self.b_band = self.min_frequency + 3*real_band_range
 
-def create_freq_dict(channelFreq: float, bandwidth: float, n: int) -> dict:
+
+def create_freq_dict(minfreq: float, bandwidth: float, n: int) -> dict:
     """ Creates a dictionary of frequencies for the given channel """
-    freq_dict = {}
-    freqs = np.linspace(channelFreq - bandwidth / 2 + bandwidth / (2 * n),
-                        channelFreq + bandwidth / 2 - bandwidth / (2 * n), n)
-
+    freqDict = {}
+    freqs = np.linspace(minfreq-10, bandwidth + minfreq-10, n)
     for index, item in enumerate(freqs):
-        freq_dict[index] = item
+        freqDict[index] = item
 
-    return freq_dict
+    return freqDict
+
+
 
 
 def bandpass(audio, lowFreq, highFreq, n):
