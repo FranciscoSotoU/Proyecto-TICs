@@ -22,7 +22,7 @@ class Sender:
         self.headerF2 = 500
         self.set_freq_bands()
         self.set_freq_dicts()
-        
+
 
     def set_freq_dicts(self):
         """ Sets the frequency dictionaries for the sender """
@@ -44,9 +44,9 @@ class Sender:
 
         # Create chirp header. Duration 10 times freqDuration = 1 second.
         header = signal.chirp(tHeader, self.headerF1, self.headerDuration, self.headerF2, method='linear')
-        r_header = signal.chirp(tHeader, self.headerF1+self.r_band, self.headerDuration, self.headerF2+self.r_band, method='linear')
-        g_header = signal.chirp(tHeader, self.headerF1+self.g_band, self.headerDuration, self.headerF2+self.g_band, method='linear')
-        b_header = signal.chirp(tHeader, self.headerF1+self.b_band, self.headerDuration, self.headerF2+self.b_band, method='linear')
+        #r_header = signal.chirp(tHeader, self.headerF1+self.r_band, self.headerDuration, self.headerF2+self.r_band, method='linear')
+        #g_header = signal.chirp(tHeader, self.headerF1+self.g_band, self.headerDuration, self.headerF2+self.g_band, method='linear')
+        #b_header = signal.chirp(tHeader, self.headerF1+self.b_band, self.headerDuration, self.headerF2+self.b_band, method='linear')
         
         red_audio =  []
         green_audio = []
@@ -67,16 +67,29 @@ class Sender:
             blue_signal = np.sin(2 * np.pi * self.blueFreqDict[int(bit)] * t)
             blue_audio.append(blue_signal)
         red_audio = np.hstack(red_audio) 
-        red_audio =  np.concatenate((r_header, red_audio,np.flip(r_header)))
+        red_audio =  np.concatenate((header, red_audio))
         green_audio = np.hstack(green_audio)
-        green_audio =  np.concatenate((g_header, green_audio,np.flip(g_header)))
+        green_audio =  np.concatenate((np.zeros_like(header), green_audio))
         blue_audio = np.hstack(blue_audio)
-        blue_audio =  np.concatenate((b_header, blue_audio,np.flip(b_header)))
+        blue_audio =  np.concatenate((np.zeros_like(header), blue_audio))
         audio = red_audio + green_audio + blue_audio
         
         # Add header to the beginning and end of the audio. The end header is flipped for reverse correlation.
 
         return audio
+    
+    def send_all_data(self):
+        audio_img = self.send_image()
+        audio_texto = self.send_text()
+
+        if len(audio_texto) > len(audio_img):
+            audio_img = np.pad(audio_img, (0, len(audio_texto) - len(audio_img)),'constant')
+        else:
+            audio_texto = np.pad(audio_texto, (0, len(audio_img) - len(audio_texto)),'constant')
+
+        audio = audio_img + audio_texto
+        return audio
+
 
 
     def send_text(self) -> np.ndarray:
@@ -102,7 +115,7 @@ class Sender:
             # print("the length of the audio signal is", len(audio))
 
             # Add header to the beginning of the audio.
-            audio = np.concatenate((header, audio))
+            audio = np.concatenate((np.zeros_like(header), audio))
             # print("The length of the audio signal with the header is", len(audio))
             return audio
         

@@ -15,13 +15,14 @@ class Receiver:
         self.buffer = None
         # self.channel = channel
         self.samplerate = 44100
-        self.freqDuration = 0.01*1.75
+        self.freqDuration = 0.01
+        self.freq_text_duration = 0.01*1.75
         self.headerDuration = 1 # 1 second header
         self.max_frequency = max_frequency
         self.min_frequency = min_frequency
         #self.textFreqDict = create_freq_dict(self.channelFreq, self.bandwidth, 2)
-        self.headerF1 = 200
-        self.headerF2 = 500
+        self.headerF1 = min_frequency
+        self.headerF2 = max_frequency
         self.set_freq_bands()
         self.set_freq_dicts()
         self.textLength = 105
@@ -74,45 +75,6 @@ class Receiver:
         bits_list = self.decode_all(bits_list)
 
         return bits_list    
-    
-
-    # def demodText_fft(self, audio_signal) -> list:
-    #     """ Demodulates the signal into binary
-    #     :param audio_signal: the signal to be demodulated
-    #     :return: the binary list """
-
-    #     # initial_index = self.find_header(audio_signal, self.headerDuration)
-    #     delta = int(self.freqDuration * self.samplerate)
-    #     # index = initial_index + int(self.headerDuration * self.samplerate)
-    #     index = self.header_correlation(audio_signal, 10)
-    #     # last_index = self.find_header(audio_signal, self.headerDuration, reversed=True)
-    #     last_index = index + self.textLength * 8 * int(self.freqDuration * self.samplerate)
-
-    #     bits_list = []
-    #     while index + delta <= last_index:
-    #         window = audio_signal[index:index + delta]
-
-    #         fft_result = np.fft.fft(window)
-    #         L = len(fft_result)
-    #         freq = np.fft.fftfreq(len(fft_result), 1 / self.samplerate)
-    #         max_idx = np.argmax(np.abs(fft_result))
-    #         max_freq = freq[max_idx]
-    #         max_freq = abs(max_freq)
-
-    #         # Subtract max_freq from each value in self.textFreqDict
-    #         differences = {key: np.abs(value - max_freq) for key, value in self.textFreqDict.items()}
-
-    #         # Find the key with the smallest difference
-    #         closest_key = min(differences, key=differences.get)
-
-    #         # Now closest_key is the key in self.textFreqDict whose value is closest to max_freq
-            
-                    
-    #         bits_list.append(closest_key)
-
-    #         index += delta
-    #         # turn the bits list int a byte list
-    #     return bits_list    
     
 
     def demodText_fft(self, audio_signal) -> list:
