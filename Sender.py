@@ -2,7 +2,7 @@ import numpy as np
 import sounddevice as sd
 import matplotlib.pyplot as plt
 import scipy.signal as signal
-# import cv2
+import cv2
 
 class Sender:
     """ Class that represents the sender of the communication channel"""
@@ -16,6 +16,7 @@ class Sender:
         self.sampleRate = 44100
         self.freq_text_duration = 0.01*1.75
         self.freqDuration = 0.01
+        self.freq_text_duration = 0.01*1.75
         self.headerDuration = self.freqDuration * 100 # 1 second header
         self.max_frequency = max_frequency
         self.min_frequency = min_frequency
@@ -103,7 +104,7 @@ class Sender:
             # Create chirp header. Duration 10 times freqDuration = 1 second.
             header = signal.chirp(tHeader, self.headerF1, self.headerDuration, self.headerF2, method='linear')
 
-            t = np.linspace(0, self.freqDuration, int(self.sampleRate * self.freqDuration))
+            t = np.linspace(0, self.freq_text_duration, int(self.sampleRate * self.freq_text_duration))
             
 
             phase = 0
@@ -111,7 +112,7 @@ class Sender:
                 freq = self.textFreqDict[int(bit)]
                 phase += 2 * np.pi * freq * t[-1]  # Calculate the phase at the end of the frequency
                 audio.append(np.sin(2 * np.pi * freq * t + phase))  # Start the next frequency at this phase
-            audio = self.hamming_encode(audio)
+            audio = self.encode_all(audio)
             audio = np.hstack(audio)
             # print("the length of the audio signal is", len(audio))
 
