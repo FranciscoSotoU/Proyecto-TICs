@@ -2,7 +2,8 @@ import numpy as np
 import sounddevice as sd
 import matplotlib.pyplot as plt
 import scipy.signal as signal
-import cv2
+# import cv2
+
 class Sender:
     """ Class that represents the sender of the communication channel"""
 
@@ -21,6 +22,7 @@ class Sender:
         self.headerF2 = 500
         self.set_freq_bands()
         self.set_freq_dicts()
+        
 
     def set_freq_dicts(self):
         """ Sets the frequency dictionaries for the sender """
@@ -150,11 +152,12 @@ class Sender:
         self.blueBinData = b_binary
     def load_text(self, path: str):
         """ Loads the text from the path """
+
         with open(path, 'r', encoding='utf-8') as file:
             rawData = file.read()
 
         self.textBinData = string_to_bits(rawData)
-        print(self.textBinData)
+        # print(self.textBinData)
 
     def dataToFrequency(self, n: int) -> list:
         """ Converts the data to list of frequencies

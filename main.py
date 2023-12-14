@@ -14,15 +14,16 @@ from scipy.io import wavfile
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 
-    sender = Sender(600, 800)
-    sender.load_text('data/text.txt')
-    audio = sender.send_text()
-    sender.playText(audio)
+    receiver = Receiver(1000, 5000)
+
+    #audio = wavfile.read("audio_xXx.wav")[1]
+    audio = receiver.listen(65)
+    wavfile.write("audio.wav", 44100, audio)
 
 
-
-    # receiver = Receiver(600, 800)
-    # audio = receiver.listen(60)
+    bins = receiver.demux_audio(audio)
+    text = receiver.bits_to_text(bins)
+    print(text)
     # wavfile.write("audio2.wav", 44100, audio)
     # print("Done listening")
 
