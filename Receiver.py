@@ -49,17 +49,17 @@ class Receiver:
         :return: the binary list """
 
         initial_index = self.find_header(audio_signal, self.headerDuration)
-        delta = int(self.freqDuration * self.samplerate)
+        delta = int(self.freq_text_duration * self.samplerate)
         index = initial_index + int(self.headerDuration * self.samplerate)
         # index = self.find_header(audio_signal, 10) + int(self.headerDuration * self.samplerate)
         print("indice inicial (después del header)", index)
         # last_index = self.find_header(audio_signal, self.headerDuration, reversed=True)
-        last_index = index + self.textLength * 8 * int(self.freqDuration * self.samplerate)
+        last_index = index + self.textLength * 8 * int(self.freq_text_duration * self.samplerate)
         
         bits_list = []
         while index + delta <= last_index:
             window = audio_signal[index:index + delta]
-            t = np.linspace(0, self.freqDuration, int(self.samplerate * self.freqDuration))
+            t = np.linspace(0, self.freq_text_duration, int(self.samplerate * self.freq_text_duration))
             max_mean = 0
             idx = 0
             for key in self.textFreqDict:
@@ -83,11 +83,11 @@ class Receiver:
         :return: the binary list """
 
         # initial_index = self.find_header(audio_signal, self.headerDuration)
-        delta = int(self.freqDuration * self.samplerate)
+        delta = int(self.freq_text_duration * self.samplerate)
         # index = initial_index + int(self.headerDuration * self.samplerate)
         index = self.header_correlation(audio_signal, 10)
         # last_index = self.find_header(audio_signal, self.headerDuration, reversed=True)
-        last_index = index + self.textLength * 8 * int(self.freqDuration * self.samplerate)
+        last_index = index + self.textLength * 8 * int(self.freq_text_duration * self.samplerate)
 
         bits_list = []
         while index + delta <= last_index:
@@ -175,7 +175,7 @@ class Receiver:
             last_index = int(self.image_bit_size * 1.75*self.samplerate*self.freqDuration)
         else:
             FreqDict = self.textFreqDict
-            last_index = int(self.text_bit_size * 1.75*self.samplerate*self.freqDuration)
+            last_index = int(self.text_bit_size * 1.75*self.samplerate*self.freq_text_duration)
 
         while index + delta < last_index + index:
 
