@@ -11,17 +11,19 @@ from scipy.io import wavfile
 class Receiver:
     """ Class that represents the receiver of the communication channel"""
 
-    def __init__(self, channelFreq: float = 600, bandwidth: float = 800):
+    def __init__(self,  min_frequency, max_frequency):
         self.buffer = None
         # self.channel = channel
         self.samplerate = 44100
-        self.freqDuration = 0.05
-        self.headerDuration = self.freqDuration * 20  # 1 second header
-        self.channelFreq = channelFreq
-        self.bandwidth = bandwidth
-        self.textFreqDict = create_freq_dict(self.channelFreq, self.bandwidth, 2)
-        self.headerF1 = 80
+        self.freqDuration = 0.005
+        self.headerDuration = self.freqDuration * 200  # 1 second header
+        self.max_frequency = max_frequency
+        self.min_frequency = min_frequency
+        #self.textFreqDict = create_freq_dict(self.channelFreq, self.bandwidth, 2)
+        self.headerF1 = 200
         self.headerF2 = 500
+        self.set_freq_bands()
+        self.set_freq_dicts()
 
     def listen(self, duration):
         """ Listens to the channel for a message """
@@ -93,32 +95,94 @@ class Receiver:
             # turn the bits list int a byte list
         return bits_list
     
-    def decode_audio(self, audio_signal):
-        initial_index = self.find_header(audio_signal, self.headerDuration)
-        print('header')
-        delta = int(self.freqDuration * self.samplerate)
-        index = initial_index + int(self.headerDuration * self.samplerate)
-        last_index = self.find_header(audio_signal, self.headerDuration, reversed=True)
+    def decode_audio(self, audio_signal,color,initial_index=None,last_index=None):
+        if not initial_index:
 
+            initial_index = self.find_header(audio_signal, self.headerDuration,color)
+            print(initial_index)
+        delta = int(self.freqDuration * self.samplerate)
+        
+        index = initial_index + int(self.headerDuration * self.samplerate)
+        if not last_index:
+            last_index = self.find_header(audio_signal, self.headerDuration,color, reversed=True)
+            print(last_index)
         bits_list = []
         t = np.linspace(0, self.freqDuration, int(self.samplerate * self.freqDuration))
-
+        if color== 'r':
+            FreqDict = self.redFreqDict
+        elif color == 'g':
+            FreqDict = self.greenFreqDict
+        elif color == 'b':
+            FreqDict = self.blueFreqDict
+        #print(color)
         while index + delta < last_index:
+
             window = audio_signal[index:index + delta]
-            freqs = np.array(list(self.textFreqDict.values()))
+            freqs = np.array(list(FreqDict.values()))
             cosines = np.sin(2 * np.pi * freqs[:, None] * t)
             means = np.abs(np.mean(window * cosines, axis=1))
             idx = np.argmax(means)
-            bits_list.append(list(self.textFreqDict.keys())[idx])
+            bits_list.append(list(FreqDict.keys())[idx])
             index += delta
+        bits_list  = np.array(bits_list)
+        grouped_values = [''.join(str(bit) for bit in bits_list[i:i+7]) for i in range(0, len(bits_list), 7)]
+        bits_list_decoded = self.decode_all(grouped_values)
 
-        return bits_list
+        grouped_values = [''.join(str(bit) for bit in bits_list_decoded[i:i+8]) for i in range(0, len(bits_list_decoded), 8)]
+        return initial_index,last_index,grouped_values
+    
+    def hamming_decode(self,bits):
+        bits = list(map(int,bits))
+        if len(bits)<7:
+            bits.append(1)
+        
+        """Decode bits using Hamming(7,4) code."""
 
-    def bits_to_image(self, bits_list):
+        H = np.array([[1, 0, 1, 0, 1, 0, 1],
+                    [0, 1, 1, 0, 0, 1, 1],
+                    [0, 0, 0, 1, 1, 1, 1]], dtype=bool)
+        syndrome = np.dot(H, bits) % 2
+        error_bit = int(''.join(map(str, syndrome)), 2)
+        if error_bit:
+            bits[error_bit - 1] ^= 1
+        bits = bits[2:]
+        bits.pop(1)
+        return bits
+    
+    def decode_all(self,byte):
+        bits_list = []
+        for bit in byte:
+            bits_list.append(self.hamming_decode(bit))
+        
+        return np.concatenate(bits_list)
+    
+    def decode_image(self,audio,img_size):
+        r_audio =  filter_signal(audio,self.samplerate,self.r_band-self.bands_range/2,self.r_band+self.bands_range*3/2)
+        #print(r_audio)
+        g_audio =  filter_signal(audio,self.samplerate,self.g_band-self.bands_range/2,self.g_band+self.bands_range*3/2)
+        b_audio =  filter_signal(audio,self.samplerate,self.b_band-self.bands_range/2,self.b_band+self.bands_range*3/2)
+        
+        
+        initial_index,last_index,b_bits = self.decode_audio(b_audio,'b')
+        _,_,r_bits = self.decode_audio(r_audio,'r',initial_index,last_index)
+        _,_,g_bits = self.decode_audio(g_audio,'g',initial_index,last_index)
+
+        r_channel = self.bits_to_image(r_bits,img_size)
+        g_channel = self.bits_to_image(g_bits,img_size)
+        b_channel = self.bits_to_image(b_bits,img_size)
+
+        image = np.dstack([b_channel,g_channel,r_channel])
+        return image
+
+    def bits_to_image(self, bits_list,img_size=20):
         values = [int(bits_str, 2) for bits_str in bits_list]
         values = np.array(values)
-        sqr_shape = int(np.sqrt(len(values)))
-        values = values.reshape(sqr_shape,sqr_shape)
+        if (len(values))<img_size**2:
+            zeros = np.zeros(img_size**2-len(values))
+            values = np.concatenate([values,zeros])
+        else:
+            values = values[:img_size**2]
+        values = values.reshape(img_size,img_size)
         return values
 
     def bits_to_text(self, bits_list):
@@ -132,14 +196,23 @@ class Receiver:
         text = ''.join(chars)
         return text
     
-    def set_freq_bands(self,min_frequency,max_frequency):
+
+    def set_freq_bands(self):
         """ Sends all the data """
-        range = max_frequency - min_frequency
-        bands_range = range/5
-        self.text_band = min_frequency + bands_range
-        self.r_band = min_frequency + 2*bands_range
-        self.g_band = min_frequency + 3*bands_range
-        self.b_band = min_frequency + 4*bands_range
+        range = self.max_frequency - self.min_frequency
+        self.bands_range = range/5
+        self.text_band = self.min_frequency + self.bands_range
+        self.r_band = self.min_frequency + 2*self.bands_range
+        self.g_band = self.min_frequency + 3*self.bands_range
+        self.b_band = self.min_frequency + 4*self.bands_range
+        self.bands_delta = self.bands_range//2
+
+    def set_freq_dicts(self):
+        """ Sets the frequency dictionaries for the sender """
+        self.textFreqDict = create_freq_dict(self.text_band, self.bands_range, 2)
+        self.redFreqDict = create_freq_dict(self.r_band, self.bands_range, 2)
+        self.greenFreqDict = create_freq_dict(self.g_band, self.bands_range, 2)
+        self.blueFreqDict = create_freq_dict(self.b_band, self.bands_range, 2)
 
         
 
@@ -197,12 +270,20 @@ class Receiver:
         #     return max_idx
         return max_idx
     
-    def find_header(self, audio, duration, reversed=False):
-
+    def find_header(self, audio, duration,color,reversed=False,):
+        if color == 'r':
+            headerF1 = self.headerF1 + self.r_band
+            headerF2 = self.headerF2 + self.r_band
+        elif color == 'g':
+            headerF1 = self.headerF1 + self.g_band
+            headerF2 = self.headerF2 + self.g_band
+        elif color == 'b':
+            headerF1 = self.headerF1 + self.b_band
+            headerF2 = self.headerF2 + self.b_band
         tHeader = np.linspace(0, duration, int(self.samplerate * self.headerDuration))
 
         # Create header using chirp, 
-        header = signal.chirp(tHeader, self.headerF1, self.headerDuration, self.headerF2, method='linear')
+        header = signal.chirp(tHeader, headerF1, self.headerDuration, headerF2, method='linear')
 
         if reversed:
             audio = np.flip(audio)
@@ -246,6 +327,16 @@ class Receiver:
 
         plt.show()
 
+    def set_freq_bands(self):
+        """ Sends all the data """
+
+        range = self.max_frequency - self.min_frequency
+        self.bands_range = range/5
+        self.text_band = self.min_frequency + self.bands_range
+        self.r_band = self.min_frequency + 2*self.bands_range
+        self.g_band = self.min_frequency + 3*self.bands_range
+        self.b_band = self.min_frequency + 4*self.bands_range
+        
 
 def create_freq_dict(channelFreq: float, bandwidth: float, n: int) -> dict:
     """ Creates a dictionary of frequencies for the given channel """
