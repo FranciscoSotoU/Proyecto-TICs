@@ -238,13 +238,13 @@ class Receiver:
         initial_index, _, b_bits = self.decode_audio(b_audio,'b')
         _,_,r_bits = self.decode_audio(r_audio,'r',initial_index)
         _,_,g_bits = self.decode_audio(g_audio,'g',initial_index)
-        _,_,text_bits = self.decode_audio(text_audio,'text',initial_index)
+        _,_,text_bytes = self.decode_audio(text_audio,'text',initial_index)
 
 
         r_channel = self.bits_to_image(r_bits, self.image_width)
         g_channel = self.bits_to_image(g_bits, self.image_width)
         b_channel = self.bits_to_image(b_bits, self.image_width)
-        text_channel = self.bits_to_text(text_bits)
+        text_channel = self.bytes_to_text(text_bytes)
 
         image = np.dstack([b_channel,g_channel,r_channel])
         return image, text_channel
@@ -264,7 +264,7 @@ class Receiver:
         """ Decodes the bytes list into text
         :param bytes_list: the bytes list to be decoded
         :return: the decoded text """
-        
+
         return ''.join(chr(int(byte, 2)) for byte in bytes_list)
     
 
