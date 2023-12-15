@@ -14,9 +14,9 @@ class Sender:
         self.GData = None
         self.BData = None
         self.sampleRate = 44100
-        self.freq_text_duration = 0.01*1.75
+        self.freq_text_duration = 0.01
         self.freqDuration = 0.01
-        self.freq_text_duration = 0.01*1.75
+        # self.freq_text_duration = 0.01*1.75
         self.headerDuration = self.freqDuration * 100 # 1 second header
         self.max_frequency = max_frequency
         self.min_frequency = min_frequency
@@ -69,11 +69,11 @@ class Sender:
             blue_signal = np.sin(2 * np.pi * self.blueFreqDict[int(bit)] * t)
             blue_audio.append(blue_signal)
         red_audio = np.hstack(red_audio) 
-        red_audio =  np.concatenate((header, red_audio))
+        red_audio =  np.concatenate((np.zeros_like(header), red_audio))
         green_audio = np.hstack(green_audio)
         green_audio =  np.concatenate((np.zeros_like(header), green_audio))
         blue_audio = np.hstack(blue_audio)
-        blue_audio =  np.concatenate((np.zeros_like(header), blue_audio))
+        blue_audio =  np.concatenate((header, blue_audio))
         audio = red_audio + green_audio + blue_audio
         
         # Add header to the beginning and end of the audio. The end header is flipped for reverse correlation.
@@ -100,6 +100,7 @@ class Sender:
             """ Write audio data from frequency list"""
 
             bitList = [item for sublist in self.textBinData for item in sublist] # flatten the list
+            bitList = self.encode_all(bitList)
             audio = []
             tHeader = np.linspace(0, self.headerDuration, int(self.sampleRate * self.headerDuration))
 
@@ -113,7 +114,7 @@ class Sender:
                 freq = self.textFreqDict[int(bit)]
                 phase += 2 * np.pi * freq * t[-1]  # Calculate the phase at the end of the frequency
                 audio.append(np.sin(2 * np.pi * freq * t + phase))  # Start the next frequency at this phase
-            audio = self.encode_all(audio)
+            
             audio = np.hstack(audio)
             # print("the length of the audio signal is", len(audio))
 
@@ -142,7 +143,7 @@ class Sender:
             new_bit_list.append(encoded_chunk)
         return np.concatenate(new_bit_list)
     def playText(self, audio):
-        """ Plays the audio data including the 50 Hz header """
+        """ Plays the audio data """
         sd.play(audio, self.sampleRate)
         sd.wait()
 

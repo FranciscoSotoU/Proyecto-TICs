@@ -12,22 +12,24 @@ from scipy.io import wavfile
 class Receiver:
     """ Class that represents the receiver of the communication channel"""
 
-    def __init__(self,  min_frequency, max_frequency):
+    def __init__(self,  min_frequency, max_frequency, image_width):
         self.buffer = None
+        self.textData = None
         # self.channel = channel
         self.samplerate = 44100
         self.freqDuration = 0.01
-        self.freq_text_duration = 0.01*1.75
+        self.freq_text_duration = 0.01
+        # self.freq_text_duration = 0.01*1.75
         self.headerDuration = 1 # 1 second header
         self.max_frequency = max_frequency
         self.min_frequency = min_frequency
         #self.textFreqDict = create_freq_dict(self.channelFreq, self.bandwidth, 2)
-        self.headerF1 = min_frequency
-        self.headerF2 = max_frequency
+        self.headerF1 = 200
+        self.headerF2 = 500
         self.set_freq_bands()
         self.set_freq_dicts()
         self.textLength = 105
-        self.image_width = 20; 
+        self.image_width = image_width; 
         self.image_bit_size = self.image_width**2 * 8 
         self.text_bit_size = self.textLength*8  
 
@@ -153,9 +155,11 @@ class Receiver:
         :param initial_index: the initial index of the signal
         :param last_index: the last index of the signal
         :return: the initial index, the last index and the string bytes list"""
+        
+        # initial_index = 0
 
-        if not initial_index:
-            initial_index = self.find_header(audio_signal, self.headerDuration,color)
+        if initial_index == None:
+            initial_index = self.find_header(audio_signal, self.headerDuration, color)
             print(initial_index)
         
         index = initial_index + int(self.headerDuration * self.samplerate)
@@ -239,6 +243,7 @@ class Receiver:
         _,_,r_bits = self.decode_audio(r_audio,'r',initial_index)
         _,_,g_bits = self.decode_audio(g_audio,'g',initial_index)
         _,_,text_bytes = self.decode_audio(text_audio,'text',initial_index)
+        self.textData = text_bytes
 
 
         r_channel = self.bits_to_image(r_bits, self.image_width)
@@ -373,6 +378,8 @@ class Receiver:
 
         # Compute the correlation of the audio and the header
         correlation = np.correlate(audio, header, mode='valid')
+        plt.plot(correlation)
+        plt.show()
 
         # Find the index of the maximum correlation
         max_idx = np.argmax(np.abs(correlation))
