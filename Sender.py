@@ -143,7 +143,7 @@ class Sender:
             new_bit_list.append(encoded_chunk)
         return np.concatenate(new_bit_list)
     def playText(self, audio):
-        """ Plays the audio data including the 50 Hz header """
+        """ Plays the audio data """
         sd.play(audio, self.sampleRate)
         sd.wait()
 
