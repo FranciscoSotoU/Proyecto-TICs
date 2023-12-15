@@ -2,7 +2,7 @@ import numpy as np
 import sounddevice as sd
 import matplotlib.pyplot as plt
 import scipy.signal as signal
-#import cv2
+import cv2
 
 class Sender:
     """ Class that represents the sender of the communication channel"""
@@ -45,10 +45,10 @@ class Sender:
         tHeader = np.linspace(0, self.headerDuration, int(self.sampleRate * self.headerDuration))
 
         # Create chirp header. Duration 10 times freqDuration = 1 second.
-        header = signal.chirp(tHeader, self.headerF1, self.headerDuration, self.headerF2, method='linear')
+        # header = signal.chirp(tHeader, self.headerF1, self.headerDuration, self.headerF2, method='linear')
         #r_header = signal.chirp(tHeader, self.headerF1+self.r_band, self.headerDuration, self.headerF2+self.r_band, method='linear')
         #g_header = signal.chirp(tHeader, self.headerF1+self.g_band, self.headerDuration, self.headerF2+self.g_band, method='linear')
-        #b_header = signal.chirp(tHeader, self.headerF1+self.b_band, self.headerDuration, self.headerF2+self.b_band, method='linear')
+        header = signal.chirp(tHeader, self.headerF1+self.b_band, self.headerDuration, self.headerF2+self.b_band, method='linear')
         
         red_audio =  []
         green_audio = []
@@ -80,7 +80,9 @@ class Sender:
 
         return audio
     
-    def send_all_data(self):
+    def send_all_data(self) -> np.ndarray:
+        """ Write the data in the form of audio wave"""
+
         audio_img = self.send_image()
         audio_texto = self.send_text()
 
@@ -164,6 +166,7 @@ class Sender:
         self.redBinData = r_binary
         self.greenBinData = g_binary
         self.blueBinData = b_binary
+
     def load_text(self, path: str):
         """ Loads the text from the path """
 

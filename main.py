@@ -15,49 +15,20 @@ from scipy.io import wavfile
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 
+    sender = Sender(1000, 5000)
+    sender.load_image("./data/1_20_Imagen1.png") # Image1 20x20 pixels
+    sender.load_text("./data/text.txt") # Text file
+
+    audio = sender.send_all_data()
+
+    plt.plot(audio)
+    plt.show()
+
     receiver = Receiver(1000, 5000)
-    fs, audio = wavfile.read("audio_nuevo.wav")
+    #fs, audio = wavfile.read("audio_nuevo.wav")
 
     img, text = receiver.demux_audio(audio)
     print(text)
     plt.imshow(img, cmap='gray')
     plt.show()
-
-
-    # receiver = Receiver(1000, 5000)
-
-    # #audio = wavfile.read("audio_xXx.wav")[1]
-    # audio = receiver.listen(65)
-    # wavfile.write("audio.wav", 44100, audio)
-
-
-    # bins = receiver.demux_audio(audio)
-    # text = receiver.bits_to_text(bins)
-    # print(text)
-    # wavfile.write("audio2.wav", 44100, audio)
-    # print("Done listening")
-
-    # fs, audio = wavfile.read("audio1.wav")
-
-    # audio = audio[44100:]
-
-    # # Normalize signal
-
-    # audio = audio/np.max(np.abs(audio))
-    # audio = audio - np.mean(audio)
-
-    # # Plot signal
-
-    # plt.plot(audio)
-    # plt.show()
-
-    # # Demodulate signal
-
-    #receiver = Receiver(600, 800)
-
-    #bits = receiver.demodulateImage(audio)
-    #decoded_text = receiver.bits_to_image(bits)
-    #cv2.imshow(decoded_text)
-    #print(decoded_text)
-    
 
