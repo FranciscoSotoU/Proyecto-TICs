@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import scipy.signal as signal
 from scipy.stats import pearsonr
 from scipy.io import wavfile
-import cv2
+#import cv2
 
 
 class Receiver:
@@ -157,12 +157,16 @@ class Receiver:
         if not initial_index:
             initial_index = self.find_header(audio_signal, self.headerDuration,color)
             print(initial_index)
-        delta = int(self.freqDuration * self.samplerate)
         
         index = initial_index + int(self.headerDuration * self.samplerate)
         
         bits_list = []
-        t = np.linspace(0, self.freqDuration, int(self.samplerate * self.freqDuration))
+        if color == 'text':
+            t = np.linspace(0, self.freq_text_duration, int(self.samplerate * self.freq_text_duration))
+            delta = int(self.freq_text_duration * self.samplerate)
+        else:
+            t = np.linspace(0, self.freqDuration, int(self.samplerate * self.freqDuration))
+            delta = int(self.freqDuration * self.samplerate)
 
 
         if color== 'r':
@@ -177,8 +181,10 @@ class Receiver:
         else:
             FreqDict = self.textFreqDict
             last_index = int(self.text_bit_size * 1.75*self.samplerate*self.freq_text_duration)
+        
+        last_index = last_index + initial_index + int(self.headerDuration * self.samplerate)
 
-        while index + delta < last_index + index:
+        while index + delta < last_index:
 
             window = audio_signal[index:index + delta]
             freqs = np.array(list(FreqDict.values()))
@@ -191,7 +197,7 @@ class Receiver:
         grouped_values = [''.join(str(bit) for bit in bits_list[i:i+7]) for i in range(0, len(bits_list), 7)] # list of strings of 7 bits
         bits_list_decoded = self.decode_all(grouped_values)
 
-        grouped_values = [''.join(str(bit) for bit in bits_list_decoded[i:i+8]) for i in range(0, len(bits_list_decoded), 8)]
+        grouped_values = [''.join(str(bit) for bit in bits_list_decoded[i:i+8]) for i in range(0, len(bits_list_decoded), 8)] #return as bytes
         return initial_index, last_index, grouped_values
     
     def hamming_decode(self, bits):
@@ -254,10 +260,12 @@ class Receiver:
         values = values.reshape(img_size,img_size)
         return values
 
-    def bits_to_text(self, bits_list):
-        values = [int(bits_str, 2) for bits_str in bits_list] # list of ints in {1,0} set
-        values = np.array(values)
-        return values
+    def bytes_to_text(self, bytes_list: list) -> str:
+        """ Decodes the bytes list into text
+        :param bytes_list: the bytes list to be decoded
+        :return: the decoded text """
+        
+        return ''.join(chr(int(byte, 2)) for byte in bytes_list)
     
 
     def set_freq_bands(self):

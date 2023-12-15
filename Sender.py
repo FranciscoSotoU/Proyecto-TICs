@@ -2,7 +2,7 @@ import numpy as np
 import sounddevice as sd
 import matplotlib.pyplot as plt
 import scipy.signal as signal
-import cv2
+#import cv2
 
 class Sender:
     """ Class that represents the sender of the communication channel"""
@@ -105,7 +105,6 @@ class Sender:
             header = signal.chirp(tHeader, self.headerF1, self.headerDuration, self.headerF2, method='linear')
 
             t = np.linspace(0, self.freq_text_duration, int(self.sampleRate * self.freq_text_duration))
-            
 
             phase = 0
             for bit in bitList:

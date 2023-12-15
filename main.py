@@ -11,15 +11,17 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy.io import wavfile
 
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 
-    sender = Sender(1000, 5000)
-    sender.load_text('data/text.txt')
-    sender.load_image('data/1_20_Imagen1.png')
-    audio = sender.send_all_data()
-    # #wavfile.write('audio3.wav', 44100,audio)
-    sender.playText(audio)
+    receiver = Receiver(1000, 5000)
+    fs, audio = wavfile.read("audio_nuevo.wav")
+
+    img, text = receiver.demux_audio(audio)
+    print(text)
+    plt.imshow(img, cmap='gray')
+    plt.show()
 
 
     # receiver = Receiver(1000, 5000)
