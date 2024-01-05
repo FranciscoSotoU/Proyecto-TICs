@@ -259,8 +259,6 @@ class Receiver:
 
         # Compute the correlation of the audio and the header
         correlation = np.correlate(audio[0:len(audio)//4], header, mode='valid')
-        plt.plot(correlation)
-        plt.show()
 
         # Find the index of the maximum correlation
         max_idx = np.argmax(np.abs(correlation))
