@@ -23,7 +23,6 @@ class Receiver:
         self.headerDuration = 1 # 1 second header
         self.max_frequency = max_frequency
         self.min_frequency = min_frequency
-        #self.textFreqDict = create_freq_dict(self.channelFreq, self.bandwidth, 2)
         self.headerF1 = 200
         self.headerF2 = 500
         self.set_freq_bands()
@@ -32,6 +31,7 @@ class Receiver:
         self.image_width = image_width; 
         self.image_bit_size = self.image_width**2 * 8 
         self.text_bit_size = self.textLength*8  
+        self.textBinData = None
 
     def listen(self, duration):
         """ Listens to the channel for a message """
@@ -44,114 +44,13 @@ class Receiver:
         print("Done listening")
         self.buffer = data
         # wavfile.write("audio1.wav", self.samplerate, data)
-        return data
-
-    def demodulateText(self, audio_signal) -> list:
-        """ Demodulates the signal into binary
-        :param audio_signal: the signal to be demodulated
-        :return: the binary list """
-
-        initial_index = self.find_header(audio_signal, self.headerDuration)
-        delta = int(self.freq_text_duration * self.samplerate)
-        index = initial_index + int(self.headerDuration * self.samplerate)
-        # index = self.find_header(audio_signal, 10) + int(self.headerDuration * self.samplerate)
-        print("indice inicial (después del header)", index)
-        # last_index = self.find_header(audio_signal, self.headerDuration, reversed=True)
-        last_index = index + self.textLength * 8 * int(self.freq_text_duration * self.samplerate)
-        
-        bits_list = []
-        while index + delta <= last_index:
-            window = audio_signal[index:index + delta]
-            t = np.linspace(0, self.freq_text_duration, int(self.samplerate * self.freq_text_duration))
-            max_mean = 0
-            idx = 0
-            for key in self.textFreqDict:
-                freq = self.textFreqDict[key]
-                cosine = np.sin(2 * np.pi * freq * t)
-                if np.abs(np.mean(window * cosine)) > max_mean:
-                    max_mean = np.abs(np.mean(window * cosine))
-                    idx = key
-            bits_list.append(idx)
-            index += delta
-            # turn the bits list int a byte list
-
-        bits_list = self.decode_all(bits_list)
-
-        return bits_list    
-    
-
-    def demodText_fft(self, audio_signal) -> list:
-        """ Demodulates the signal into binary
-        :param audio_signal: the signal to be demodulated
-        :return: the binary list """
-
-        # initial_index = self.find_header(audio_signal, self.headerDuration)
-        delta = int(self.freq_text_duration * self.samplerate)
-        # index = initial_index + int(self.headerDuration * self.samplerate)
-        index = self.header_correlation(audio_signal, 10)
-        # last_index = self.find_header(audio_signal, self.headerDuration, reversed=True)
-        last_index = index + self.textLength * 8 * int(self.freq_text_duration * self.samplerate)
-
-        bits_list = []
-        while index + delta <= last_index:
-            window = audio_signal[index:index + delta]
-
-            fft_result = np.fft.fft(window)
-            L = len(fft_result)
-            freq = np.fft.fftfreq(len(fft_result), 1 / self.samplerate)
-            max_idx = np.argmax(np.abs(fft_result))
-            max_freq = freq[max_idx]
-            max_freq = abs(max_freq)
-
-            # Subtract max_freq from each value in self.textFreqDict
-            differences = {key: np.abs(value - max_freq) for key, value in self.textFreqDict.items()}
-
-            # Find the key with the smallest difference
-            closest_key = min(differences, key=differences.get)
-
-            # Now closest_key is the key in self.textFreqDict whose value is closest to max_freq
-            
-                    
-            bits_list.append(closest_key)
-
-            index += delta
-            # turn the bits list int a byte list
-        return bits_list
+        return data   
     
     
-    
-    def demodulateImage(self, audio_signal):
-        """ Demodulates the signal into binary
-        :param audio_signal: the signal to be demodulated
-        :return: the binary list """
-
-        initial_index = self.find_header(audio_signal, self.headerDuration)
-        print('header')
-        delta = int(self.freqDuration * self.samplerate)
-        index = initial_index + int(self.headerDuration * self.samplerate)
-        last_index = self.find_header(audio_signal, self.headerDuration, reversed=True)
-
-        bits_list = []
-        while index + delta < last_index:
-            window = audio_signal[index:index + delta]
-            t = np.linspace(0, self.freqDuration, int(self.samplerate * self.freqDuration))
-            max_mean = 0
-            idx = 0
-            for key in self.textFreqDict:
-                freq = self.textFreqDict[key]
-                cosine = np.sin(2 * np.pi * freq * t)
-                if np.abs(np.mean(window * cosine)) > max_mean:
-                    max_mean = np.abs(np.mean(window * cosine))
-                    idx = key
-            bits_list.append(idx)
-            index += delta
-            # turn the bits list int a byte list
-        return bits_list
-    
-    def decode_audio(self, audio_signal: np.ndarray, color='text', initial_index=None) -> (int, int, list):
-        """ Decodes the audio signal into binary
+    def demodulate_audio(self, audio_signal: np.ndarray, channel ='text', initial_index=None) -> (int, int, list):
+        """ Demodulates the audio signal into binary
         :param audio_signal: the audio signal to be decoded
-        :param color: the color of the audio signal
+        :param channel: the channel of the audio signal
         :param initial_index: the initial index of the signal
         :param last_index: the last index of the signal
         :return: the initial index, the last index and the string bytes list"""
@@ -159,13 +58,13 @@ class Receiver:
         # initial_index = 0
 
         if initial_index == None:
-            initial_index = self.find_header(audio_signal, self.headerDuration, color)
+            initial_index = self.find_header(audio_signal, self.headerDuration, channel)
             print(initial_index)
         
         index = initial_index + int(self.headerDuration * self.samplerate)
         
         bits_list = []
-        if color == 'text':
+        if channel == 'text':
             t = np.linspace(0, self.freq_text_duration, int(self.samplerate * self.freq_text_duration))
             delta = int(self.freq_text_duration * self.samplerate)
         else:
@@ -173,13 +72,13 @@ class Receiver:
             delta = int(self.freqDuration * self.samplerate)
 
 
-        if color== 'r':
+        if channel== 'r':
             FreqDict = self.redFreqDict
             last_index = int(self.image_bit_size * 1.75*self.samplerate*self.freqDuration)
-        elif color == 'g':
+        elif channel == 'g':
             FreqDict = self.greenFreqDict
             last_index = int(self.image_bit_size * 1.75*self.samplerate*self.freqDuration)
-        elif color == 'b':
+        elif channel == 'b':
             FreqDict = self.blueFreqDict
             last_index = int(self.image_bit_size * 1.75*self.samplerate*self.freqDuration)
         else:
@@ -188,15 +87,28 @@ class Receiver:
         
         last_index = last_index + initial_index + int(self.headerDuration * self.samplerate)
 
+        zeroFrequency = FreqDict[0]
+        oneFrequency = FreqDict[1]
+
         while index + delta < last_index:
 
             window = audio_signal[index:index + delta]
-            freqs = np.array(list(FreqDict.values()))
-            cosines = np.sin(2 * np.pi * freqs[:, None] * t)
-            means = np.abs(np.mean(window * cosines, axis=1))
-            idx = np.argmax(means)
-            bits_list.append(list(FreqDict.keys())[idx])
+            delta_t = np.linspace(index, index + delta, delta)
+            symbol_Zero = np.sin(2*np.pi*delta_t / (self.samplerate/zeroFrequency))
+            symbol_One = np.sin(2*np.pi*delta_t / (self.samplerate/oneFrequency))
+
+            # Compute the correlation of the audio and the header
+
+            correlation_Zero = np.correlate(window, symbol_Zero, mode='valid')
+            correlation_One = np.correlate(window, symbol_One, mode='valid')
+
+            if correlation_Zero > correlation_One:
+                bits_list.append(0)
+            else:
+                bits_list.append(1)
+            
             index += delta
+
         bits_list  = np.array(bits_list)
         grouped_values = [''.join(str(bit) for bit in bits_list[i:i+7]) for i in range(0, len(bits_list), 7)] # list of strings of 7 bits
         bits_list_decoded = self.decode_all(grouped_values)
@@ -229,7 +141,10 @@ class Receiver:
         
         return np.concatenate(bits_list)
     
-    def demux_audio(self,audio):
+    def decode_audio(self, audio: np.ndarray) -> (np.ndarray, str):
+        """ Decodes the audio into an image and text. Main method of the class 
+        :param audio: the audio to be decoded
+        :return: the image and the text """
 
         text_audio = filter_signal(audio,self.samplerate,self.text_band-self.bands_range*0.25,self.text_band+self.bands_range*1.5)
         r_audio =  filter_signal(audio,self.samplerate,self.r_band-self.bands_range*0.25,self.r_band+self.bands_range*1.5)
@@ -239,10 +154,10 @@ class Receiver:
 
         #initial_index = self.find_header(audio, self.headerDuration, 'r')
         
-        initial_index, _, b_bits = self.decode_audio(b_audio,'b')
-        _,_,r_bits = self.decode_audio(r_audio,'r',initial_index)
-        _,_,g_bits = self.decode_audio(g_audio,'g',initial_index)
-        _,_,text_bytes = self.decode_audio(text_audio,'text',initial_index)
+        initial_index, _, b_bits = self.demodulate_audio(b_audio,'b')
+        _,_,r_bits = self.demodulate_audio(r_audio,'r',initial_index)
+        _,_,g_bits = self.demodulate_audio(g_audio,'g',initial_index)
+        _,_,text_bytes = self.demodulate_audio(text_audio,'text',initial_index)
         self.textData = text_bytes
 
 
@@ -311,61 +226,27 @@ class Receiver:
         sd.wait()
         return
 
-    def find_header2(self, audio, duration, reversed=False):
-        """ Finds the header in the audio """
-        tHeader = np.linspace(0, duration, int(self.samplerate * self.headerDuration))
-
-        # Create header using chirp, 
-        header = signal.chirp(tHeader, self.headerF1, self.headerDuration, self.headerF2, method='linear')
-
-        if reversed:
-            audio = np.flip(audio)
-            header = np.flip(header)
-
-        index = 0
-        delta = len(header)
-        max_val = -np.inf
-        max_idx = 0
-        debug_list = []
-        while index + delta < len(audio):
-            window = audio[index:index + delta]
-            correlation_coefficient = np.abs(np.mean(window * header))  # pearsonr(window, header)[0]
-            # if correlation_coefficient > 0.4:
-            #     if reversed:
-            #         return len(audio) - index
-            #     return index
-            debug_list.append(correlation_coefficient)
-            if correlation_coefficient > max_val:
-                max_val = correlation_coefficient
-                max_idx = index
-            index += 1
-
-        # if reversed:
-        #     return len(audio) - max_idx
-        # else:
-        #     return max_idx
-        return max_idx
     
-    def find_header(self, audio, duration, color = 'text', reversed=False) -> int:
+    def find_header(self, audio, duration, channel = 'text', reversed=False) -> int:
         """ Finds the header in the audio
         :param audio: the audio to be analyzed
         :param duration: the duration of the header
-        :param color: the color of the header
+        :param channel: the channel of the header
         :param reversed: if the header is reversed
         """
 
-        if color == 'r':
+        if channel == 'r':
             headerF1 = self.headerF1 + self.r_band
             headerF2 = self.headerF2 + self.r_band
-        elif color == 'g':
+        elif channel == 'g':
             headerF1 = self.headerF1 + self.g_band
             headerF2 = self.headerF2 + self.g_band
-        elif color == 'b':
+        elif channel == 'b':
             headerF1 = self.headerF1 + self.b_band
             headerF2 = self.headerF2 + self.b_band
         else:
             headerF1 = self.headerF1
-            headerF2 = self.headerF2 
+            headerF2 = self.headerF2
 
         tHeader = np.linspace(0, duration, int(self.samplerate * self.headerDuration))
 
@@ -377,7 +258,7 @@ class Receiver:
             header = np.flip(header)
 
         # Compute the correlation of the audio and the header
-        correlation = np.correlate(audio, header, mode='valid')
+        correlation = np.correlate(audio[0:len(audio)//4], header, mode='valid')
         plt.plot(correlation)
         plt.show()
 
@@ -435,7 +316,7 @@ class Receiver:
 def create_freq_dict(minfreq: float, bandwidth: float, n: int) -> dict:
     """ Creates a dictionary of frequencies for the given channel """
     freqDict = {}
-    freqs = np.linspace(minfreq-10, bandwidth + minfreq-10, n)
+    freqs = np.linspace(minfreq, bandwidth + minfreq, n)
     for index, item in enumerate(freqs):
         freqDict[index] = item
 

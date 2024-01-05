@@ -10,16 +10,27 @@ import sounddevice as sd
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.io import wavfile
+    
+
+sender1 = Sender(1000, 5000)
+
+sender1.load_image("./data/1_20_Imagen1.png") # Image1 20x20 pixels
+sender1.load_text("./data/text.txt") 
+
+audio1 = sender1.send_all_data()
+
+receiver = Receiver(1000, 5000, 20)
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
+img, txt = receiver.decode_audio(audio1)
 
-    # sender1 = Sender(1000, 5000)
-    # sender2 = Sender(6000, 10000)
+print(txt)
 
-    # sender1.load_image("./data/1_20_Imagen1.png") # Image1 20x20 pixels
-    # sender1.load_text("./data/text.txt") # Text file
+plt.imshow(img, cmap='gray')
+
+
+
+# Text file
     # audio1 = sender1.send_all_data()
     # sender1.playText(audio1)
 
@@ -34,26 +45,25 @@ if __name__ == '__main__':
     #     audio1 = np.pad(audio1, (0, len(audio2) - len(audio1)),'constant')
 
     # audio = audio1 + audio2
-    
 
-    # plt.plot(audio)
+    #plt.plot(audio)
+    #plt.show()
+
+    # receiver1 = Receiver(1000, 5000, 20)
+    # receiver2 = Receiver(6000, 10000, 14)
+
+    # audio = receiver2.listen(70)
+
+    # wavfile.write("wavfile_test_1.wav", 44100, audio)
+    # # fs, audio = wavfile.read("sender2_fromCellphone.wav")
+
+    # img1, text1 = receiver1.demux_audio(audio)
+    # img2, text2 = receiver2.demux_audio(audio)
+
+    # print(text1)
+    # print(text2)
+    # plt.imshow(img1, cmap='gray')
     # plt.show()
-
-    receiver1 = Receiver(1000, 5000, 20)
-    receiver2 = Receiver(6000, 10000, 14)
-
-    audio = receiver2.listen(70)
-
-    wavfile.write("sender1y2_fromCellphone_andTablet.wav", 44100, audio)
-    # fs, audio = wavfile.read("sender2_fromCellphone.wav")
-
-    img1, text1 = receiver1.demux_audio(audio)
-    img2, text2 = receiver2.demux_audio(audio)
-
-    print(text1)
-    print(text2)
-    plt.imshow(img1, cmap='gray')
-    plt.show()
-    plt.imshow(img2, cmap='gray')
-    plt.show()
+    # plt.imshow(img2, cmap='gray')
+    # plt.show()
 

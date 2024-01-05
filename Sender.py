@@ -35,6 +35,7 @@ class Sender:
 
     def send_image(self) -> np.ndarray:
         """ Write audio data from frequency list"""
+
         bitListred = [item for sublist in self.redBinData for item in sublist]
         bitListgreen = [item for sublist in self.greenBinData for item in sublist]
         bitListblue = [item for sublist in self.blueBinData for item in sublist]
@@ -44,10 +45,6 @@ class Sender:
         bitListred = self.encode_all(bitListred)
         tHeader = np.linspace(0, self.headerDuration, int(self.sampleRate * self.headerDuration))
 
-        # Create chirp header. Duration 10 times freqDuration = 1 second.
-        # header = signal.chirp(tHeader, self.headerF1, self.headerDuration, self.headerF2, method='linear')
-        #r_header = signal.chirp(tHeader, self.headerF1+self.r_band, self.headerDuration, self.headerF2+self.r_band, method='linear')
-        #g_header = signal.chirp(tHeader, self.headerF1+self.g_band, self.headerDuration, self.headerF2+self.g_band, method='linear')
         header = signal.chirp(tHeader, self.headerF1+self.b_band, self.headerDuration, self.headerF2+self.b_band, method='linear')
         
         red_audio =  []
@@ -73,7 +70,7 @@ class Sender:
         green_audio = np.hstack(green_audio)
         green_audio =  np.concatenate((np.zeros_like(header), green_audio))
         blue_audio = np.hstack(blue_audio)
-        blue_audio =  np.concatenate((header, blue_audio))
+        blue_audio =  np.concatenate((3*header, blue_audio))
         audio = red_audio + green_audio + blue_audio
         
         # Add header to the beginning and end of the audio. The end header is flipped for reverse correlation.
@@ -97,7 +94,8 @@ class Sender:
 
 
     def send_text(self) -> np.ndarray:
-            """ Write audio data from frequency list"""
+            """ Write audio data from frequency list
+            :return: the audio data """
 
             bitList = [item for sublist in self.textBinData for item in sublist] # flatten the list
             bitList = self.encode_all(bitList)
@@ -106,16 +104,24 @@ class Sender:
 
             # Create chirp header. Duration 10 times freqDuration = 1 second.
             header = signal.chirp(tHeader, self.headerF1, self.headerDuration, self.headerF2, method='linear')
+            N = int(self.sampleRate * self.freq_text_duration)
+            t = np.linspace(0, self.freq_text_duration, N)
 
-            t = np.linspace(0, self.freq_text_duration, int(self.sampleRate * self.freq_text_duration))
-
-            phase = 0
+            # Create the audio signal
+            frequencies = []
+            prev_phase = 0 
+            # bitllist to freqlist
             for bit in bitList:
                 freq = self.textFreqDict[int(bit)]
-                phase += 2 * np.pi * freq * t[-1]  # Calculate the phase at the end of the frequency
-                audio.append(np.sin(2 * np.pi * freq * t + phase))  # Start the next frequency at this phase
+                frequencies += [freq]*N
             
-            audio = np.hstack(audio)
+            prev_phase = 0
+            phases = np.zeros_like(frequencies)
+            i = 1
+            while i < len(frequencies):
+                phases[i] = phases[i-1] + 2 * np.pi * frequencies[i-1] * (1/self.sampleRate)
+                i += 1
+            audio = np.sin(phases)
             # print("the length of the audio signal is", len(audio))
 
             # Add header to the beginning of the audio.
