@@ -12,21 +12,27 @@ from matplotlib import pyplot as plt
 from scipy.io import wavfile
     
 
-sender1 = Sender(1000, 5000)
 
-sender1.load_image("./data/1_20_Imagen1.png") # Image1 20x20 pixels
-sender1.load_text("./data/text.txt") 
+receiver2 = Receiver(6000, 10000, 14)
+receiver1 = Receiver(1000, 5000, 20)
 
-audio1 = sender1.send_all_data()
+audio1 = wavfile.read("sender1_0501.wav")[1]
+audio2 = wavfile.read("sender2_0501.wav")[1]
 
-receiver = Receiver(1000, 5000, 20)
+audio2 = audio2/np.max(np.abs(audio2))
+audio1 = audio1/np.max(np.abs(audio1))
+
+img2, txt2 = receiver2.decode_audio(audio2)
+print(txt2)
+plt.imshow(img2, cmap='gray')
+
+img1, txt1 = receiver1.decode_audio(audio1) 
+print(txt1)
+plt.imshow(img1, cmap='gray')
 
 
-img, txt = receiver.decode_audio(audio1)
 
-print(txt)
 
-plt.imshow(img, cmap='gray')
 
 
 

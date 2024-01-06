@@ -31,7 +31,9 @@ class Receiver:
         self.image_width = image_width; 
         self.image_bit_size = self.image_width**2 * 8 
         self.text_bit_size = self.textLength*8  
-        self.textBinData = None
+        self.redBits = None
+        self.greenBits = None
+        self.blueBits = None
 
     def listen(self, duration):
         """ Listens to the channel for a message """
@@ -52,7 +54,6 @@ class Receiver:
         :param audio_signal: the audio signal to be decoded
         :param channel: the channel of the audio signal
         :param initial_index: the initial index of the signal
-        :param last_index: the last index of the signal
         :return: the initial index, the last index and the string bytes list"""
         
         # initial_index = 0
@@ -75,46 +76,69 @@ class Receiver:
         if channel== 'r':
             FreqDict = self.redFreqDict
             last_index = int(self.image_bit_size * 1.75*self.samplerate*self.freqDuration)
+
         elif channel == 'g':
             FreqDict = self.greenFreqDict
             last_index = int(self.image_bit_size * 1.75*self.samplerate*self.freqDuration)
+
         elif channel == 'b':
             FreqDict = self.blueFreqDict
             last_index = int(self.image_bit_size * 1.75*self.samplerate*self.freqDuration)
+
+            
         else:
             FreqDict = self.textFreqDict
             last_index = int(self.text_bit_size * 1.75*self.samplerate*self.freq_text_duration)
-        
-        last_index = last_index + initial_index + int(self.headerDuration * self.samplerate)
-
-        zeroFrequency = FreqDict[0]
-        oneFrequency = FreqDict[1]
-
-        while index + delta < last_index:
-
-            window = audio_signal[index:index + delta]
-            delta_t = np.linspace(index, index + delta, delta)
-            symbol_Zero = np.sin(2*np.pi*delta_t / (self.samplerate/zeroFrequency))
-            symbol_One = np.sin(2*np.pi*delta_t / (self.samplerate/oneFrequency))
-
-            # Compute the correlation of the audio and the header
-
-            correlation_Zero = np.correlate(window, symbol_Zero, mode='valid')
-            correlation_One = np.correlate(window, symbol_One, mode='valid')
-
-            if correlation_Zero > correlation_One:
-                bits_list.append(0)
-            else:
-                bits_list.append(1)
             
-            index += delta
-
-        bits_list  = np.array(bits_list)
+        
+        bits_list = self.demodText_fft(audio_signal, index, channel, FreqDict)
+        bits_list= np.array(bits_list)
         grouped_values = [''.join(str(bit) for bit in bits_list[i:i+7]) for i in range(0, len(bits_list), 7)] # list of strings of 7 bits
         bits_list_decoded = self.decode_all(grouped_values)
 
         grouped_values = [''.join(str(bit) for bit in bits_list_decoded[i:i+8]) for i in range(0, len(bits_list_decoded), 8)] #return as bytes
         return initial_index, last_index, grouped_values
+    
+    
+    def demodText_fft(self, audio_signal, index, channel, freqDict) -> list:
+        """ Demodulates the signal into binary
+        :param audio_signal: the signal to be demodulated
+        :return: the binary list """
+
+        # initial_index = self.find_header(audio_signal, self.headerDuration)
+
+        if channel == 'text':
+            delta = int(self.freq_text_duration * self.samplerate)
+            last_index = int(self.text_bit_size * 1.75*self.samplerate*self.freq_text_duration)
+        else:
+            delta = int(self.freqDuration * self.samplerate)
+            last_index = int(self.image_bit_size * 1.75*self.samplerate*self.freqDuration)
+
+        last_index = last_index + index
+        zeroFrequency = freqDict[0]
+        oneFrequency = freqDict[1]
+        bits_list = []
+        freq = np.fft.fftfreq(delta, 1 / self.samplerate)
+        while index + delta <= last_index:
+            window = audio_signal[index:index + delta]
+
+            fft_result = np.fft.fft(window)            
+            max_idx = np.argmax(np.abs(fft_result))
+            max_freq = freq[max_idx]
+            max_freq = abs(max_freq)
+
+            distanceToZero = abs(max_freq - zeroFrequency)
+            distanceToOne = abs(max_freq - oneFrequency)
+
+            if distanceToZero < distanceToOne:
+                bits_list.append(0)
+            else:
+                bits_list.append(1)
+
+            index += delta
+            # turn the bits list int a byte list
+        return bits_list
+
     
     def hamming_decode(self, bits):
         bits = list(map(int,bits)) # list of bits
@@ -159,7 +183,9 @@ class Receiver:
         _,_,g_bits = self.demodulate_audio(g_audio,'g',initial_index)
         _,_,text_bytes = self.demodulate_audio(text_audio,'text',initial_index)
         self.textData = text_bytes
-
+        self.redBits = r_bits
+        self.greenBits = g_bits
+        self.blueBits = b_bits
 
         r_channel = self.bits_to_image(r_bits, self.image_width)
         g_channel = self.bits_to_image(g_bits, self.image_width)
