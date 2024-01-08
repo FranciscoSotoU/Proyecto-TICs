@@ -66,6 +66,7 @@ class Receiver:
         green_index = self.image_bit_size // 8
         blue_index = (self.image_bit_size * 2) // 8
         text_index = (self.image_bit_size * 3) // 8
+        terminal_index = (self.image_bit_size * 3) // 8 + self.text_bit_size // 8
         
         bits_list = self.demodText_fft(audio_signal, index, channel, self.freqDict)
         bits_list= np.array(bits_list)
@@ -77,7 +78,7 @@ class Receiver:
         red_bytes = bytes_list[red_index:green_index]
         green_bytes = bytes_list[green_index:blue_index]
         blue_bytes = bytes_list[blue_index:text_index]
-        text_bytes = bytes_list[text_index:]
+        text_bytes = bytes_list[text_index:terminal_index]
         
         return red_bytes, green_bytes, blue_bytes, text_bytes
     
