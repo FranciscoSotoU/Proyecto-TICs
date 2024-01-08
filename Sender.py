@@ -20,6 +20,7 @@ class Sender:
         self.headerDuration = self.freqDuration * 100 # 1 second header
         self.max_frequency = max_frequency
         self.min_frequency = min_frequency
+        self.bandwidth = self.max_frequency - self.min_frequency
         self.headerF1 = 200
         self.headerF2 = 500
         self.set_freq_bands()
@@ -28,51 +29,42 @@ class Sender:
 
     def set_freq_dicts(self):
         """ Sets the frequency dictionaries for the sender """
-        self.textFreqDict = create_freq_dict(self.text_band, self.bands_range, 4)
-        self.redFreqDict = create_freq_dict(self.r_band, self.bands_range, 4)
-        self.greenFreqDict = create_freq_dict(self.g_band, self.bands_range, 4)
-        self.blueFreqDict = create_freq_dict(self.b_band, self.bands_range, 4)
-
+        self.FreqDict = create_freq_dict(self.min_frequency, self.bandwidth, 4)
+        
     def send_image(self) -> np.ndarray:
         """ Write audio data from frequency list"""
 
         bitListred = [item for sublist in self.redBinData for item in sublist]
         bitListgreen = [item for sublist in self.greenBinData for item in sublist]
         bitListblue = [item for sublist in self.blueBinData for item in sublist]
-        audio = []
         bitListblue = self.encode_all(bitListblue)
         bitListgreen = self.encode_all(bitListgreen)
         bitListred = self.encode_all(bitListred)
+        #create a list of strings where each string are 2 element of a bitList
+        bitListred = [str(bitListred[i]) + str(bitListred[i+1]) for i in range(0, len(bitListred), 2)]
+        bitListgreen = [str(bitListgreen[i]) + str(bitListgreen[i+1]) for i in range(0, len(bitListgreen), 2)]
+        bitListblue = [str(bitListblue[i]) + str(bitListblue[i+1]) for i in range(0, len(bitListblue), 2)]
+        audio = []
+
         tHeader = np.linspace(0, self.headerDuration, int(self.sampleRate * self.headerDuration))
 
-        header = signal.chirp(tHeader, self.headerF1+self.b_band, self.headerDuration, self.headerF2+self.b_band, method='linear')
+        header = signal.chirp(tHeader, self.headerF1+self.min_frequency, self.headerDuration, self.headerF2+self.min_frequency, method='linear')
         
-        red_audio =  []
-        green_audio = []
-        blue_audio = []
+        audio = []
         for bit in bitListred:
-
             t = np.linspace(0, self.freqDuration, int(self.sampleRate * self.freqDuration))
-            red_signal = np.sin(2 * np.pi * self.redFreqDict[int(bit)] * t)
-            red_audio.append(red_signal)
+            red_signal = np.sin(2 * np.pi * self.FreqDict[bit] * t)
+            audio.append(red_signal)
         for bit in bitListgreen:
-            #print(bit)
             t = np.linspace(0, self.freqDuration, int(self.sampleRate * self.freqDuration))
-            green_signal = np.sin(2 * np.pi * self.greenFreqDict[int(bit)] * t)
-            green_audio.append(green_signal)
+            green_signal = np.sin(2 * np.pi * self.FreqDict[bit] * t)
+            audio.append(green_signal)
         for bit in bitListblue:
-            #print(bit)
             t = np.linspace(0, self.freqDuration, int(self.sampleRate * self.freqDuration))
-            blue_signal = np.sin(2 * np.pi * self.blueFreqDict[int(bit)] * t)
-            blue_audio.append(blue_signal)
-        red_audio = np.hstack(red_audio) 
-        green_audio = np.hstack(green_audio)
-        green_audio =  np.concatenate((np.zeros_like(header), green_audio))
-        blue_audio = np.hstack(blue_audio)
-        blue_audio =  np.concatenate((3*header, blue_audio))
-        audio = red_audio + green_audio + blue_audio
-        
-        # Add header to the beginning and end of the audio. The end header is flipped for reverse correlation.
+            blue_signal = np.sin(2 * np.pi * self.FreqDict[bit] * t)
+            audio.append(blue_signal)
+        audio = np.concatenate(audio)
+        audio =  np.concatenate([header, audio])
 
         return audio
     
@@ -82,12 +74,7 @@ class Sender:
         audio_img = self.send_image()
         audio_texto = self.send_text()
 
-        if len(audio_texto) > len(audio_img):
-            audio_img = np.pad(audio_img, (0, len(audio_texto) - len(audio_img)),'constant')
-        else:
-            audio_texto = np.pad(audio_texto, (0, len(audio_img) - len(audio_texto)),'constant')
-
-        audio = audio_img + audio_texto
+        audio = np.concatenate([audio_img, audio_texto])
         return audio
 
 
@@ -98,34 +85,22 @@ class Sender:
 
             bitList = [item for sublist in self.textBinData for item in sublist] # flatten the list
             bitList = self.encode_all(bitList)
+            bitList = [str(bitList[i]) + str(bitList[i+1]) for i in range(0, len(bitList), 2)]
             audio = []
-            tHeader = np.linspace(0, self.headerDuration, int(self.sampleRate * self.headerDuration))
-
-            # Create chirp header. Duration 10 times freqDuration = 1 second.
-            header = signal.chirp(tHeader, self.headerF1, self.headerDuration, self.headerF2, method='linear')
             N = int(self.sampleRate * self.freq_text_duration)
-            t = np.linspace(0, self.freq_text_duration, N)
-
             # Create the audio signal
             frequencies = []
-            prev_phase = 0 
-            # bitllist to freqlist
             for bit in bitList:
-                freq = self.textFreqDict[int(bit)]
+                freq = self.FreqDict[bit]
                 frequencies += [freq]*N
             
-            prev_phase = 0
             phases = np.zeros_like(frequencies)
             i = 1
             while i < len(frequencies):
                 phases[i] = phases[i-1] + 2 * np.pi * frequencies[i-1] * (1/self.sampleRate)
                 i += 1
             audio = np.sin(phases)
-            # print("the length of the audio signal is", len(audio))
 
-            # Add header to the beginning of the audio.
-            audio = np.concatenate((np.zeros_like(header), audio))
-            # print("The length of the audio signal with the header is", len(audio))
             return audio
         
     def hamming_encode(self,bits):
@@ -182,34 +157,9 @@ class Sender:
         self.textBinData = string_to_bits(rawData)
         # print(self.textBinData)
 
-    def dataToFrequency(self, n: int) -> list:
-        """ Converts the data to list of frequencies
-        :param
-        n: the number of symbols in the n-fsk modulation
-        :return: the list of frequencies """
-        freqList = []  # np.array(len(self.textBinData)*2)
-        if n == 2:
-            for index, byte in enumerate(self.textBinData):
-                for bit in byte:
-                    freqList.append(self.textFreqDict[int(bit)])
-        else:
-            for index, byte in enumerate(self.textBinData):
-                semiByte1 = byte[0:4]
-                semiByte2 = byte[4:8]
-                freqList.append(self.textFreqDict[int(semiByte1, 2)])
-                freqList.append(self.textFreqDict[int(semiByte2, 2)])
-
-        return freqList
     def set_freq_bands(self):
         """ Sends all the data """
 
-        range = self.max_frequency - self.min_frequency
-        self.bands_range = (range/4)*0.5
-        real_band_range = range/4
-        self.text_band = self.min_frequency 
-        self.r_band = self.min_frequency + 1*real_band_range
-        self.g_band = self.min_frequency + 2*real_band_range
-        self.b_band = self.min_frequency + 3*real_band_range
 
 def string_to_bits(s):
     ascii_list = [ord(ch) for ch in s]  # Ascii values of the characters
@@ -220,8 +170,12 @@ def create_freq_dict(minfreq: float, bandwidth: float, n: int) -> dict:
     """ Creates a dictionary of frequencies for the given channel """
     freqDict = {}
     freqs = np.linspace(minfreq, bandwidth + minfreq, n)
+    #Create a srqt(n) bits  per frequency
     for index, item in enumerate(freqs):
-        freqDict[index] = item
+        key =bin(index)[2:]
+        if len(key) == 1:
+            key = '0' + key
+        freqDict[key] = item
 
     return freqDict
 
