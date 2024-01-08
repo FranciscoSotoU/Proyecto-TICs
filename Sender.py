@@ -28,10 +28,10 @@ class Sender:
 
     def set_freq_dicts(self):
         """ Sets the frequency dictionaries for the sender """
-        self.textFreqDict = create_freq_dict(self.text_band, self.bands_range, 2)
-        self.redFreqDict = create_freq_dict(self.r_band, self.bands_range, 2)
-        self.greenFreqDict = create_freq_dict(self.g_band, self.bands_range, 2)
-        self.blueFreqDict = create_freq_dict(self.b_band, self.bands_range, 2)
+        self.textFreqDict = create_freq_dict(self.text_band, self.bands_range, 4)
+        self.redFreqDict = create_freq_dict(self.r_band, self.bands_range, 4)
+        self.greenFreqDict = create_freq_dict(self.g_band, self.bands_range, 4)
+        self.blueFreqDict = create_freq_dict(self.b_band, self.bands_range, 4)
 
     def send_image(self) -> np.ndarray:
         """ Write audio data from frequency list"""
@@ -66,7 +66,6 @@ class Sender:
             blue_signal = np.sin(2 * np.pi * self.blueFreqDict[int(bit)] * t)
             blue_audio.append(blue_signal)
         red_audio = np.hstack(red_audio) 
-        red_audio =  np.concatenate((np.zeros_like(header), red_audio))
         green_audio = np.hstack(green_audio)
         green_audio =  np.concatenate((np.zeros_like(header), green_audio))
         blue_audio = np.hstack(blue_audio)
