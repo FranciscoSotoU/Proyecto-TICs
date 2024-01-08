@@ -18,7 +18,7 @@ class Receiver:
         # self.channel = channel
         self.samplerate = 44100
         self.freqDuration = 0.01
-        self.freq_text_duration = 0.01
+        self.freq_text_duration = 0.02
         # self.freq_text_duration = 0.01*1.75
         self.headerDuration = 1 # 1 second header
         self.max_frequency = max_frequency
