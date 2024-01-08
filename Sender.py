@@ -89,19 +89,12 @@ class Sender:
             audio = []
             N = int(self.sampleRate * self.freq_text_duration)
             # Create the audio signal
-            frequencies = []
             for bit in bitList:
-                freq = self.FreqDict[bit]
-                frequencies += [freq]*N
-            
-            phases = np.zeros_like(frequencies)
-            i = 1
-            while i < len(frequencies):
-                phases[i] = phases[i-1] + 2 * np.pi * frequencies[i-1] * (1/self.sampleRate)
-                i += 1
-            audio = np.sin(phases)
+                t = np.linspace(0, self.freqDuration, int(self.sampleRate * self.freqDuration))
+                text_signal = np.sin(2 * np.pi * self.FreqDict[bit] * t)
+                audio.append(text_signal)
 
-            return audio
+            return np.concatenate(audio)
         
     def hamming_encode(self,bits):
         """Encode bits using Hamming(7,4) code."""

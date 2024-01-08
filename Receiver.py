@@ -58,8 +58,6 @@ class Receiver:
 
         if initial_index == None:
             initial_index = self.find_header(audio_signal, self.headerDuration, channel)
-            print(initial_index)
-        
         index = initial_index + int(self.headerDuration * self.samplerate)        
         bits_list = []
 
@@ -92,41 +90,44 @@ class Receiver:
         # initial_index = self.find_header(audio_signal, self.headerDuration)
 
         delta = int(self.freqDuration * self.samplerate)
-
-        last_index = last_index + index
-        zeroFrequency = freqDict[0]
-        oneFrequency = freqDict[1]
-        twoFrequency = freqDict[2]
-        threeFrequency = freqDict[3]
+        last_index = index + int((self.text_bit_size+3*self.image_bit_size) * self.samplerate * self.freqDuration)
+        zeroFrequency = freqDict['00']
+        oneFrequency = freqDict['01']
+        twoFrequency = freqDict['10']
+        threeFrequency = freqDict['11']
 
         bits_list = []
         freq = np.fft.fftfreq(delta, 1 / self.samplerate)
-        while index + delta <= last_index:
-            window = audio_signal[index:index + delta]
+        while index + delta < last_index:
+            try:
+                window = audio_signal[index:index + delta]
+                print(index+delta)
+                print(len(window))
+                fft_result = np.fft.fft(window)            
+                max_idx = np.argmax(np.abs(fft_result))
+                max_freq = freq[max_idx]
+                max_freq = abs(max_freq)
 
-            fft_result = np.fft.fft(window)            
-            max_idx = np.argmax(np.abs(fft_result))
-            max_freq = freq[max_idx]
-            max_freq = abs(max_freq)
+                distances = np.array([abs(max_freq - zeroFrequency), 
+                            abs(max_freq - oneFrequency), 
+                            abs(max_freq - twoFrequency), 
+                            abs(max_freq - threeFrequency)])
 
-            distances = np.array([abs(max_freq - zeroFrequency), 
-                         abs(max_freq - oneFrequency), 
-                         abs(max_freq - twoFrequency), 
-                         abs(max_freq - threeFrequency)])
+                min_distance = np.argmin(distances)
 
-            min_distance = np.argmin(distances)[0]
+                if min_distance == 0:
+                    bits_list += ['0','0']
+                elif min_distance == 1:
+                    bits_list += ['0','1']
+                elif min_distance == 2:
+                    bits_list += ['1','0']
+                elif min_distance == 3:
+                    bits_list += ['1','1']
 
-            if min_distance == 0:
-                bits_list += ['0','0']
-            elif min_distance == 1:
-                bits_list += ['0','1']
-            elif min_distance == 2:
-                bits_list += ['1','0']
-            elif min_distance == 3:
-                bits_list += ['1','1']
-
-            index += delta
-            # turn the bits list int a byte list
+                index += delta
+                # turn the bits list int a byte list
+            except:
+                break
         return bits_list
 
     
