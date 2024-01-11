@@ -1,7 +1,7 @@
 # Transmision Multi-Usuarios Usando Tecnicas de Acceso Multiple Usando Portadoras Audibles
 
 Este repositorio cuenta con la implementacion de un sistema de 'Transmision Multi-Usuarios Usando Tecnicas de Acceso Multiple Usando Portadoras Audibles'.
-Para su correcta ejecucio es necesario instalar las librerias utilizadas. Para esto se debe ejecturar el codigo:
+Para su correcta ejecucio es necesario instalar las librerias utilizadas junto a la version de python=3.9. Para esto se debe ejecturar el codigo:
 
 `$ pip install -r requirements.txt`
 
