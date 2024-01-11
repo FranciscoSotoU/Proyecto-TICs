@@ -1,6 +1,5 @@
-*.wav
+
 /.conda
 /.idea
 *.pyc
-__pycache__/Receiver.cpython-39.pyc
-__pycache__/Receiver.cpython-39.pyc
+*.cpython
