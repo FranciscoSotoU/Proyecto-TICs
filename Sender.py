@@ -14,7 +14,7 @@ class Sender:
         self.GData = None
         self.BData = None
         self.sampleRate = 44100
-        self.freq_text_duration = 0.02
+        self.freq_text_duration = 0.01
         self.freqDuration = 0.01
         # self.freq_text_duration = 0.01*1.75
         self.headerDuration = self.freqDuration * 100 # 1 second header
@@ -115,6 +115,7 @@ class Sender:
             encoded_chunk = self.hamming_encode(chunk)
             new_bit_list.append(encoded_chunk)
         return np.concatenate(new_bit_list)
+    
     def playText(self, audio):
         """ Plays the audio data """
         sd.play(audio, self.sampleRate)
