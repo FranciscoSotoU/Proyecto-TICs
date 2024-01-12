@@ -1,0 +1,7 @@
+numpy
+sounddevice
+matplotlib
+scipy
+opencv-python
+PyYAML
+ipykernel

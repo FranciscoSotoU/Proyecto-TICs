@@ -1,0 +1,4 @@
+min_frequency: 1000
+max_frequency: 3000
+path_data: data
+number: 1
